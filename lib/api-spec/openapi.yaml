@@ -3,20 +3,46 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CPNS & School Tutoring Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: packages
+    description: Course packages
+  - name: orders
+    description: Orders and payments
+  - name: bank-accounts
+    description: Bank account management
+  - name: enrollments
+    description: Student enrollments
+  - name: materials
+    description: PDF materials
+  - name: material-progress
+    description: Material reading progress
+  - name: questions
+    description: Question bank
+  - name: quizzes
+    description: Quiz management
+  - name: tryouts
+    description: CBT Tryout management
+  - name: attempts
+    description: Quiz and tryout attempts
+  - name: admin
+    description: Admin dashboard data
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +50,1296 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update own profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # Users (admin)
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Packages
+  /packages:
+    get:
+      operationId: listPackages
+      tags: [packages]
+      summary: List course packages
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+    post:
+      operationId: createPackage
+      tags: [packages]
+      summary: Create a course package (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+
+  /packages/{id}:
+    get:
+      operationId: getPackage
+      tags: [packages]
+      summary: Get package detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePackage
+      tags: [packages]
+      summary: Update package (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+    delete:
+      operationId: deletePackage
+      tags: [packages]
+      summary: Delete package (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Bank Accounts
+  /bank-accounts:
+    get:
+      operationId: listBankAccounts
+      tags: [bank-accounts]
+      summary: List active bank accounts
+      responses:
+        "200":
+          description: Bank accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BankAccount"
+    post:
+      operationId: createBankAccount
+      tags: [bank-accounts]
+      summary: Create bank account (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankAccountInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+
+  /bank-accounts/{id}:
+    patch:
+      operationId: updateBankAccount
+      tags: [bank-accounts]
+      summary: Update bank account (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankAccountUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+    delete:
+      operationId: deleteBankAccount
+      tags: [bank-accounts]
+      summary: Delete bank account (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Orders
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders (admin sees all, student sees own)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderList"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create an order (buy a package)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Order created with payment instructions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}/upload-proof:
+    post:
+      operationId: uploadPaymentProof
+      tags: [orders]
+      summary: Upload payment proof (student)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentProofInput"
+      responses:
+        "200":
+          description: Proof uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/verify:
+    post:
+      operationId: verifyOrder
+      tags: [orders]
+      summary: Approve or reject an order (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderVerifyInput"
+      responses:
+        "200":
+          description: Order verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # Enrollments
+  /enrollments:
+    get:
+      operationId: listEnrollments
+      tags: [enrollments]
+      summary: List enrollments (own for student, all for admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Enrollments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Enrollment"
+
+  /enrollments/{id}:
+    get:
+      operationId: getEnrollment
+      tags: [enrollments]
+      summary: Get enrollment detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Enrollment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+
+  # Materials
+  /packages/{packageId}/materials:
+    get:
+      operationId: listMaterials
+      tags: [materials]
+      summary: List materials for a package
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Materials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Material"
+    post:
+      operationId: createMaterial
+      tags: [materials]
+      summary: Add a material to a package (admin/tutor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaterialInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Material"
+
+  /materials/{id}:
+    patch:
+      operationId: updateMaterial
+      tags: [materials]
+      summary: Update a material (admin/tutor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaterialUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Material"
+    delete:
+      operationId: deleteMaterial
+      tags: [materials]
+      summary: Delete a material
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /materials/{id}/read:
+    post:
+      operationId: markMaterialRead
+      tags: [material-progress]
+      summary: Mark material as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterialProgress"
+
+  /packages/{packageId}/progress:
+    get:
+      operationId: getPackageProgress
+      tags: [material-progress]
+      summary: Get reading progress for a package
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageProgress"
+
+  # Questions
+  /questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List questions (admin/tutor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionList"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a question (admin/tutor)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /questions/{id}:
+    get:
+      operationId: getQuestion
+      tags: [questions]
+      summary: Get question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+    patch:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Quizzes
+  /packages/{packageId}/quizzes:
+    get:
+      operationId: listQuizzes
+      tags: [quizzes]
+      summary: List quizzes for a package
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quiz"
+    post:
+      operationId: createQuiz
+      tags: [quizzes]
+      summary: Create a quiz (admin/tutor)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+
+  /quizzes/{id}:
+    get:
+      operationId: getQuiz
+      tags: [quizzes]
+      summary: Get quiz detail with questions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz with questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizDetail"
+    patch:
+      operationId: updateQuiz
+      tags: [quizzes]
+      summary: Update quiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+    delete:
+      operationId: deleteQuiz
+      tags: [quizzes]
+      summary: Delete quiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /quizzes/{id}/questions:
+    post:
+      operationId: addQuizQuestion
+      tags: [quizzes]
+      summary: Add question to quiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizQuestionInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizDetail"
+
+  # Tryouts
+  /tryouts:
+    get:
+      operationId: listTryouts
+      tags: [tryouts]
+      summary: List tryouts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: packageId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tryouts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tryout"
+    post:
+      operationId: createTryout
+      tags: [tryouts]
+      summary: Create tryout (admin/tutor)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TryoutInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tryout"
+
+  /tryouts/{id}:
+    get:
+      operationId: getTryout
+      tags: [tryouts]
+      summary: Get tryout detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tryout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TryoutDetail"
+    patch:
+      operationId: updateTryout
+      tags: [tryouts]
+      summary: Update tryout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TryoutUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tryout"
+    delete:
+      operationId: deleteTryout
+      tags: [tryouts]
+      summary: Delete tryout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /tryouts/{id}/questions:
+    post:
+      operationId: addTryoutQuestion
+      tags: [tryouts]
+      summary: Add question to tryout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TryoutQuestionInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TryoutDetail"
+
+  # Attempts (quiz & tryout)
+  /quizzes/{id}/start:
+    post:
+      operationId: startQuizAttempt
+      tags: [attempts]
+      summary: Start a quiz attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Attempt started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attempt"
+
+  /tryouts/{id}/start:
+    post:
+      operationId: startTryoutAttempt
+      tags: [attempts]
+      summary: Start a tryout attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Attempt started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attempt"
+
+  /attempts/{id}/submit:
+    post:
+      operationId: submitAttempt
+      tags: [attempts]
+      summary: Submit answers for an attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptSubmitInput"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+
+  /attempts/{id}:
+    get:
+      operationId: getAttempt
+      tags: [attempts]
+      summary: Get attempt result detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+
+  /attempts:
+    get:
+      operationId: listAttempts
+      tags: [attempts]
+      summary: List my attempts (student)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: quizId
+          in: query
+          schema:
+            type: integer
+        - name: tryoutId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attempt"
+
+  # Admin dashboard
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/revenue:
+    get:
+      operationId: getRevenueChart
+      tags: [admin]
+      summary: Get monthly revenue data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Revenue data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueData"
+
+  # Student dashboard
+  /student/dashboard:
+    get:
+      operationId: getStudentDashboard
+      tags: [enrollments]
+      summary: Get student dashboard overview
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentDashboard"
+
+  /student/score-history:
+    get:
+      operationId: getScoreHistory
+      tags: [attempts]
+      summary: Get student score history chart data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Score history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreHistoryPoint"
+
+  /tryouts/{id}/ranking:
+    get:
+      operationId: getTryoutRanking
+      tags: [tryouts]
+      summary: Get tryout national ranking
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ranking
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RankingEntry"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +1349,920 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    # Auth
+    RegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: ["string", "null"]
+        targetInstitution:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        targetInstitution:
+          type: ["string", "null"]
+        avatar:
+          type: ["string", "null"]
+
+    # User
+    User:
+      type: object
+      required: [id, name, email, role, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [admin, tutor, student]
+        avatar:
+          type: ["string", "null"]
+        targetInstitution:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        phone:
+          type: ["string", "null"]
+
+    UserList:
+      type: object
+      required: [users, total, page, limit]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # Package
+    Package:
+      type: object
+      required: [id, name, description, price, durationDays, category, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        durationDays:
+          type: integer
+        category:
+          type: string
+          enum: [CPNS, SD, SMP, SMA]
+        thumbnail:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        materialCount:
+          type: ["integer", "null"]
+        quizCount:
+          type: ["integer", "null"]
+        tryoutCount:
+          type: ["integer", "null"]
+
+    PackageDetail:
+      type: object
+      required: [id, name, description, price, durationDays, category, isActive, createdAt, materials, quizzes, tryouts]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        durationDays:
+          type: integer
+        category:
+          type: string
+        thumbnail:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        materials:
+          type: array
+          items:
+            $ref: "#/components/schemas/Material"
+        quizzes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Quiz"
+        tryouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tryout"
+
+    PackageInput:
+      type: object
+      required: [name, description, price, durationDays, category]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        durationDays:
+          type: integer
+        category:
+          type: string
+          enum: [CPNS, SD, SMP, SMA]
+        thumbnail:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    PackageUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+        durationDays:
+          type: integer
+        category:
+          type: string
+        thumbnail:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # Bank Account
+    BankAccount:
+      type: object
+      required: [id, bankName, accountNumber, accountHolder, isActive]
+      properties:
+        id:
+          type: integer
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        accountHolder:
+          type: string
+        isActive:
+          type: boolean
+
+    BankAccountInput:
+      type: object
+      required: [bankName, accountNumber, accountHolder]
+      properties:
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        accountHolder:
+          type: string
+        isActive:
+          type: boolean
+
+    BankAccountUpdate:
+      type: object
+      properties:
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        accountHolder:
+          type: string
+        isActive:
+          type: boolean
+
+    # Order
+    Order:
+      type: object
+      required: [id, userId, packageId, orderCode, amount, uniqueAmount, status, expiredAt, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        packageId:
+          type: integer
+        orderCode:
+          type: string
+        amount:
+          type: integer
+        uniqueAmount:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, WAITING_VERIFICATION, PAID, EXPIRED, REJECTED]
+        paymentProof:
+          type: ["string", "null"]
+        expiredAt:
+          type: string
+        paidAt:
+          type: ["string", "null"]
+        rejectionReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        package:
+          $ref: "#/components/schemas/Package"
+        bankAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/BankAccount"
+
+    OrderInput:
+      type: object
+      required: [packageId]
+      properties:
+        packageId:
+          type: integer
+
+    OrderList:
+      type: object
+      required: [orders, total, page, limit]
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    PaymentProofInput:
+      type: object
+      required: [paymentProof]
+      properties:
+        paymentProof:
+          type: string
+
+    OrderVerifyInput:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+        rejectionReason:
+          type: ["string", "null"]
+
+    # Enrollment
+    Enrollment:
+      type: object
+      required: [id, userId, packageId, startedAt, expiredAt, isActive]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        packageId:
+          type: integer
+        startedAt:
+          type: string
+        expiredAt:
+          type: string
+        isActive:
+          type: boolean
+        package:
+          $ref: "#/components/schemas/Package"
+        progressPercent:
+          type: ["integer", "null"]
+
+    # Material
+    Material:
+      type: object
+      required: [id, packageId, title, orderIndex, createdAt]
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        createdAt:
+          type: string
+        isRead:
+          type: ["boolean", "null"]
+
+    MaterialInput:
+      type: object
+      required: [title, orderIndex]
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+
+    MaterialUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+
+    MaterialProgress:
+      type: object
+      required: [id, userId, materialId, isRead]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        materialId:
+          type: integer
+        isRead:
+          type: boolean
+        readAt:
+          type: ["string", "null"]
+
+    PackageProgress:
+      type: object
+      required: [packageId, totalMaterials, readMaterials, progressPercent]
+      properties:
+        packageId:
+          type: integer
+        totalMaterials:
+          type: integer
+        readMaterials:
+          type: integer
+        progressPercent:
+          type: integer
+
+    # Question
+    Question:
+      type: object
+      required: [id, questionText, optionA, optionB, optionC, optionD, optionE, correctAnswer, category, difficulty, createdAt]
+      properties:
+        id:
+          type: integer
+        questionText:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        optionE:
+          type: string
+        correctAnswer:
+          type: string
+          enum: [A, B, C, D, E]
+        explanation:
+          type: ["string", "null"]
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        tags:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    QuestionInput:
+      type: object
+      required: [questionText, optionA, optionB, optionC, optionD, optionE, correctAnswer, category, difficulty]
+      properties:
+        questionText:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        optionE:
+          type: string
+        correctAnswer:
+          type: string
+          enum: [A, B, C, D, E]
+        explanation:
+          type: ["string", "null"]
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        tags:
+          type: ["string", "null"]
+
+    QuestionUpdate:
+      type: object
+      properties:
+        questionText:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        optionE:
+          type: string
+        correctAnswer:
+          type: string
+          enum: [A, B, C, D, E]
+        explanation:
+          type: ["string", "null"]
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        tags:
+          type: ["string", "null"]
+
+    QuestionList:
+      type: object
+      required: [questions, total, page, limit]
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # Quiz
+    Quiz:
+      type: object
+      required: [id, packageId, title, timeLimit, passingScore, createdAt]
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        timeLimit:
+          type: integer
+        passingScore:
+          type: integer
+        questionCount:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    QuizInput:
+      type: object
+      required: [title, timeLimit, passingScore]
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        timeLimit:
+          type: integer
+        passingScore:
+          type: integer
+
+    QuizUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        timeLimit:
+          type: integer
+        passingScore:
+          type: integer
+
+    QuizDetail:
+      type: object
+      required: [id, packageId, title, timeLimit, passingScore, questions, createdAt]
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        timeLimit:
+          type: integer
+        passingScore:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        createdAt:
+          type: string
+
+    QuizQuestionInput:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
+        orderIndex:
+          type: ["integer", "null"]
+
+    # Tryout
+    Tryout:
+      type: object
+      required: [id, title, type, durationMinutes, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [CPNS_SKD, UTBK, CUSTOM]
+        durationMinutes:
+          type: integer
+        scheduledAt:
+          type: ["string", "null"]
+        packageId:
+          type: ["integer", "null"]
+        questionCount:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    TryoutInput:
+      type: object
+      required: [title, type, durationMinutes]
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [CPNS_SKD, UTBK, CUSTOM]
+        durationMinutes:
+          type: integer
+        scheduledAt:
+          type: ["string", "null"]
+        packageId:
+          type: ["integer", "null"]
+
+    TryoutUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+        durationMinutes:
+          type: integer
+        scheduledAt:
+          type: ["string", "null"]
+        packageId:
+          type: ["integer", "null"]
+
+    TryoutDetail:
+      type: object
+      required: [id, title, type, durationMinutes, questions, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+        durationMinutes:
+          type: integer
+        scheduledAt:
+          type: ["string", "null"]
+        packageId:
+          type: ["integer", "null"]
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TryoutQuestion"
+        createdAt:
+          type: string
+
+    TryoutQuestion:
+      type: object
+      required: [id, questionText, optionA, optionB, optionC, optionD, optionE, category]
+      properties:
+        id:
+          type: integer
+        questionText:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        optionE:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: ["string", "null"]
+
+    TryoutQuestionInput:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
+        subCategory:
+          type: ["string", "null"]
+
+    # Attempts
+    Attempt:
+      type: object
+      required: [id, userId, type, startedAt, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        quizId:
+          type: ["integer", "null"]
+        tryoutId:
+          type: ["integer", "null"]
+        type:
+          type: string
+          enum: [quiz, tryout]
+        score:
+          type: ["number", "null"]
+        startedAt:
+          type: string
+        finishedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        quizTitle:
+          type: ["string", "null"]
+        tryoutTitle:
+          type: ["string", "null"]
+
+    AttemptSubmitInput:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: object
+          additionalProperties:
+            type: string
+
+    AttemptResult:
+      type: object
+      required: [id, userId, type, score, totalQuestions, correctAnswers, startedAt, finishedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        quizId:
+          type: ["integer", "null"]
+        tryoutId:
+          type: ["integer", "null"]
+        type:
+          type: string
+        score:
+          type: number
+        totalQuestions:
+          type: integer
+        correctAnswers:
+          type: integer
+        twkScore:
+          type: ["number", "null"]
+        tiuScore:
+          type: ["number", "null"]
+        tkpScore:
+          type: ["number", "null"]
+        passed:
+          type: ["boolean", "null"]
+        rank:
+          type: ["integer", "null"]
+        totalParticipants:
+          type: ["integer", "null"]
+        startedAt:
+          type: string
+        finishedAt:
+          type: string
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerDetail"
+
+    AnswerDetail:
+      type: object
+      required: [questionId, questionText, userAnswer, correctAnswer, isCorrect]
+      properties:
+        questionId:
+          type: integer
+        questionText:
+          type: string
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        optionE:
+          type: string
+        userAnswer:
+          type: ["string", "null"]
+        correctAnswer:
+          type: string
+        isCorrect:
+          type: boolean
+        explanation:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+
+    # Admin stats
+    AdminStats:
+      type: object
+      required: [totalStudents, totalRevenue, pendingOrders, totalPackages, activeEnrollments]
+      properties:
+        totalStudents:
+          type: integer
+        totalRevenue:
+          type: integer
+        pendingOrders:
+          type: integer
+        totalPackages:
+          type: integer
+        activeEnrollments:
+          type: integer
+        newStudentsThisMonth:
+          type: integer
+        revenueThisMonth:
+          type: integer
+
+    RevenueData:
+      type: object
+      required: [month, revenue, orders]
+      properties:
+        month:
+          type: string
+        revenue:
+          type: integer
+        orders:
+          type: integer
+
+    # Student dashboard
+    StudentDashboard:
+      type: object
+      required: [activeEnrollments, totalQuizzesTaken, averageScore, latestTryoutScore]
+      properties:
+        activeEnrollments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Enrollment"
+        totalQuizzesTaken:
+          type: integer
+        averageScore:
+          type: number
+        latestTryoutScore:
+          type: ["number", "null"]
+        recentAttempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attempt"
+
+    ScoreHistoryPoint:
+      type: object
+      required: [date, score, type]
+      properties:
+        date:
+          type: string
+        score:
+          type: number
+        type:
+          type: string
+        title:
+          type: string
+
+    RankingEntry:
+      type: object
+      required: [rank, userId, name, score]
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        score:
+          type: number
+        isCurrentUser:
+          type: boolean
