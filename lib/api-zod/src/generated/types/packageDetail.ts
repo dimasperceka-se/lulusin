@@ -19,6 +19,7 @@ export interface PackageDetail {
   /** @nullable */
   thumbnail?: string | null;
   isActive: boolean;
+  maintenanceMode: boolean;
   createdAt: string;
   materials: Material[];
   quizzes: Quiz[];

@@ -5,6 +5,7 @@ import * as z from "zod";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { sendVerificationEmail, emailjsConfigured } from "@/lib/email";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -46,12 +47,36 @@ export default function Register() {
 
   function onSubmit(values: z.infer<typeof registerSchema>) {
     registerMutation.mutate({ data: values }, {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
         login(data.token, data.user);
-        toast({
-          title: "Pendaftaran berhasil",
-          description: "Selamat datang di SiapLulus!",
-        });
+
+        if (data.verificationToken && emailjsConfigured) {
+          try {
+            await sendVerificationEmail({
+              toEmail: data.user.email,
+              toName: data.user.name,
+              token: data.verificationToken,
+            });
+            toast({
+              title: "Pendaftaran berhasil",
+              description: `Email verifikasi terkirim ke ${data.user.email}. Cek inbox.`,
+            });
+          } catch {
+            toast({
+              title: "Pendaftaran berhasil",
+              description: "Tapi gagal kirim email verifikasi via EmailJS. Bisa resend dari /verify-email.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Pendaftaran berhasil",
+            description: emailjsConfigured
+              ? "Selamat datang di Lulusin!"
+              : "EmailJS belum dikonfigurasi — verifikasi email di-skip.",
+          });
+        }
+
         setLocation("/dashboard");
       },
       onError: (error) => {
@@ -65,12 +90,13 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 bg-mesh pointer-events-none [mask-image:radial-gradient(ellipse_at_top,black,transparent_60%)]" />
       <Navbar />
-      <div className="flex-1 flex items-center justify-center p-4 py-12">
-        <Card className="w-full max-w-md shadow-lg border-primary/10">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-primary">Buat Akun SiapLulus</CardTitle>
+      <div className="relative flex-1 flex items-center justify-center p-4 py-12">
+        <Card className="w-full max-w-md shadow-card border-card-border">
+          <CardHeader className="space-y-2 text-center">
+            <CardTitle className="font-display text-2xl md:text-3xl font-bold">Buat Akun Lulusin</CardTitle>
             <CardDescription>
               Mulai perjalanan belajarmu hari ini
             </CardDescription>
@@ -143,9 +169,9 @@ export default function Register() {
                     </FormItem>
                   )}
                 />
-                <Button 
-                  type="submit" 
-                  className="w-full mt-6" 
+                <Button
+                  type="submit"
+                  className="w-full mt-6 shadow-glow h-11"
                   disabled={registerMutation.isPending}
                 >
                   {registerMutation.isPending ? "Memproses..." : "Daftar Sekarang"}

@@ -20,7 +20,7 @@ export default function PackageQuizzes() {
 
   const handleStartQuiz = (quizId: number) => {
     startAttempt.mutate(
-      { data: { quizId } },
+      { id: quizId },
       {
         onSuccess: (data) => {
           setLocation(`/quiz/${quizId}?attemptId=${data.id}`);

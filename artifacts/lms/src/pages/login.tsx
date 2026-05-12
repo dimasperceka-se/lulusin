@@ -59,12 +59,13 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 bg-mesh pointer-events-none [mask-image:radial-gradient(ellipse_at_top,black,transparent_60%)]" />
       <Navbar />
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg border-primary/10">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-primary">Masuk ke SiapLulus</CardTitle>
+      <div className="relative flex-1 flex items-center justify-center p-4 py-12">
+        <Card className="w-full max-w-md shadow-card border-card-border">
+          <CardHeader className="space-y-2 text-center">
+            <CardTitle className="font-display text-2xl md:text-3xl font-bold">Masuk ke Lulusin</CardTitle>
             <CardDescription>
               Masukkan email dan password untuk melanjutkan belajar
             </CardDescription>
@@ -98,13 +99,20 @@ export default function Login() {
                     </FormItem>
                   )}
                 />
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full shadow-glow h-11"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? "Memproses..." : "Masuk"}
                 </Button>
+                <div className="text-center text-sm">
+                  <Link href="/forgot-password">
+                    <span className="text-muted-foreground hover:text-primary hover:underline cursor-pointer">
+                      Lupa password?
+                    </span>
+                  </Link>
+                </div>
               </form>
             </Form>
           </CardContent>

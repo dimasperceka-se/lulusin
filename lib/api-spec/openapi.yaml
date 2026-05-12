@@ -36,8 +36,45 @@ tags:
     description: Quiz and tryout attempts
   - name: admin
     description: Admin dashboard data
+  - name: pre-test
+    description: Public pre-test (no auth) for landing page lead-gen
 
 paths:
+  /pre-test/questions:
+    get:
+      operationId: getPreTestQuestions
+      tags: [pre-test]
+      summary: Get 15 random questions (5 TWK + 5 TIU + 5 TKP) without correct answers
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PreTestQuestion"
+
+  /pre-test/submit:
+    post:
+      operationId: submitPreTest
+      tags: [pre-test]
+      summary: Submit answers, get score + estimate + probability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreTestSubmitInput"
+      responses:
+        "200":
+          description: Pre-test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreTestResult"
+
+
   /healthz:
     get:
       operationId: healthCheck
@@ -143,6 +180,94 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/User"
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify email with token from email link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailInput"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/resend-verification:
+    post:
+      operationId: resendVerification
+      tags: [auth]
+      summary: Re-issue email verification token (returns token for FE to email)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationInput"
+      responses:
+        "200":
+          description: New token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResendVerificationResult"
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Issue password reset token (returns token for FE to email)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordInput"
+      responses:
+        "200":
+          description: Reset token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResult"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password using token from email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # Users (admin)
   /users:
@@ -558,6 +683,52 @@ paths:
       responses:
         "200":
           description: Order verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /admin/qris-status:
+    get:
+      operationId: getQrisStatus
+      tags: [admin]
+      summary: Check whether QRIS Interactive credentials are configured (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: QRIS provider status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [configured]
+                properties:
+                  configured:
+                    type: boolean
+
+  /orders/{id}/method:
+    patch:
+      operationId: updateOrderMethod
+      tags: [orders]
+      summary: Update payment method on a pending order (student)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderMethodInput"
+      responses:
+        "200":
+          description: Method updated
           content:
             application/json:
               schema:
@@ -1390,6 +1561,61 @@ components:
           type: string
         user:
           $ref: "#/components/schemas/User"
+        verificationToken:
+          type: ["string", "null"]
+          description: Email verification token; only present on /auth/register. Frontend uses this to send the verify email via EmailJS.
+
+    VerifyEmailInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    ResendVerificationInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    ResendVerificationResult:
+      type: object
+      required: [verificationToken, email, name]
+      properties:
+        verificationToken:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+
+    ForgotPasswordInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    ForgotPasswordResult:
+      type: object
+      required: [resetToken, email, name]
+      properties:
+        resetToken:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+
+    ResetPasswordInput:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
 
     ProfileUpdate:
       type: object
@@ -1406,7 +1632,7 @@ components:
     # User
     User:
       type: object
-      required: [id, name, email, role, createdAt]
+      required: [id, name, email, role, isEmailVerified, createdAt]
       properties:
         id:
           type: integer
@@ -1423,6 +1649,8 @@ components:
           type: ["string", "null"]
         targetInstitution:
           type: ["string", "null"]
+        isEmailVerified:
+          type: boolean
         createdAt:
           type: string
 
@@ -1456,7 +1684,7 @@ components:
     # Package
     Package:
       type: object
-      required: [id, name, description, price, durationDays, category, isActive, createdAt]
+      required: [id, name, description, price, durationDays, category, isActive, maintenanceMode, createdAt]
       properties:
         id:
           type: integer
@@ -1475,6 +1703,9 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+        maintenanceMode:
+          type: boolean
+          description: When true, package is visible but checkout is disabled.
         createdAt:
           type: string
         materialCount:
@@ -1486,7 +1717,7 @@ components:
 
     PackageDetail:
       type: object
-      required: [id, name, description, price, durationDays, category, isActive, createdAt, materials, quizzes, tryouts]
+      required: [id, name, description, price, durationDays, category, isActive, maintenanceMode, createdAt, materials, quizzes, tryouts]
       properties:
         id:
           type: integer
@@ -1503,6 +1734,8 @@ components:
         thumbnail:
           type: ["string", "null"]
         isActive:
+          type: boolean
+        maintenanceMode:
           type: boolean
         createdAt:
           type: string
@@ -1601,7 +1834,7 @@ components:
     # Order
     Order:
       type: object
-      required: [id, userId, packageId, orderCode, amount, uniqueAmount, status, expiredAt, createdAt]
+      required: [id, userId, packageId, orderCode, amount, uniqueAmount, status, paymentMethod, expiredAt, createdAt]
       properties:
         id:
           type: integer
@@ -1618,6 +1851,9 @@ components:
         status:
           type: string
           enum: [PENDING, WAITING_VERIFICATION, PAID, EXPIRED, REJECTED]
+        paymentMethod:
+          type: string
+          enum: [BANK_TRANSFER, QRIS]
         paymentProof:
           type: ["string", "null"]
         expiredAt:
@@ -1628,6 +1864,15 @@ components:
           type: ["string", "null"]
         createdAt:
           type: string
+        qrisContent:
+          type: ["string", "null"]
+          description: Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.
+        qrisInvoiceId:
+          type: ["string", "null"]
+        qrisNmid:
+          type: ["string", "null"]
+        qrisGeneratedAt:
+          type: ["string", "null"]
         package:
           $ref: "#/components/schemas/Package"
         bankAccounts:
@@ -1641,6 +1886,17 @@ components:
       properties:
         packageId:
           type: integer
+        paymentMethod:
+          type: string
+          enum: [BANK_TRANSFER, QRIS]
+
+    OrderMethodInput:
+      type: object
+      required: [paymentMethod]
+      properties:
+        paymentMethod:
+          type: string
+          enum: [BANK_TRANSFER, QRIS]
 
     OrderList:
       type: object
@@ -1711,6 +1967,12 @@ components:
           type: ["string", "null"]
         fileUrl:
           type: ["string", "null"]
+        content:
+          type: ["string", "null"]
+          description: Inline markdown content (rendered client-side). When set, FE renders this instead of fileUrl.
+        category:
+          type: ["string", "null"]
+          description: Category for grouping in UI (e.g. "TWK", "TIU", "TKP", "UMUM").
         orderIndex:
           type: integer
         createdAt:
@@ -2266,3 +2528,78 @@ components:
           type: number
         isCurrentUser:
           type: boolean
+
+    PreTestQuestion:
+      type: object
+      required: [id, questionText, optionA, optionB, optionC, optionD, optionE, category]
+      properties:
+        id:
+          type: integer
+        questionText:
+          type: string
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        optionE:
+          type: string
+        category:
+          type: string
+
+    PreTestSubmitInput:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            required: [questionId, answer]
+            properties:
+              questionId:
+                type: integer
+              answer:
+                type: string
+                enum: [A, B, C, D, E]
+
+    PreTestBreakdown:
+      type: object
+      required: [correct, total]
+      properties:
+        correct:
+          type: integer
+        total:
+          type: integer
+
+    PreTestResult:
+      type: object
+      required: [totalCorrect, totalQuestions, breakdown, monthsWithoutCourse, monthsWithCourse, probabilityWithoutCourse, probabilityWithCourse, recommendation]
+      properties:
+        totalCorrect:
+          type: integer
+        totalQuestions:
+          type: integer
+        breakdown:
+          type: object
+          required: [TWK, TIU, TKP]
+          properties:
+            TWK:
+              $ref: "#/components/schemas/PreTestBreakdown"
+            TIU:
+              $ref: "#/components/schemas/PreTestBreakdown"
+            TKP:
+              $ref: "#/components/schemas/PreTestBreakdown"
+        monthsWithoutCourse:
+          type: number
+        monthsWithCourse:
+          type: number
+        probabilityWithoutCourse:
+          type: number
+        probabilityWithCourse:
+          type: number
+        recommendation:
+          type: string

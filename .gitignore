@@ -47,3 +47,11 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Cache files from crawling
+attached_assets/crawling_result/cache_belajarbro/
+attached_assets/crawling_result/cache_belajarbro_materi/
+
+# Cache files from crawling
+attached_assets/crawling_result/cache_belajarbro/
+attached_assets/crawling_result/cache_belajarbro_materi/

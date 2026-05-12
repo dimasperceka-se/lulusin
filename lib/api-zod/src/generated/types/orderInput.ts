@@ -5,7 +5,9 @@
  * CPNS & School Tutoring Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { OrderInputPaymentMethod } from "./orderInputPaymentMethod";
 
 export interface OrderInput {
   packageId: number;
+  paymentMethod?: OrderInputPaymentMethod;
 }

@@ -1,4 +1,4 @@
-# SiapLulus — CPNS & School Tutoring LMS
+# Lulusin — CPNS & School Tutoring LMS
 
 A full-stack e-learning platform for Indonesian civil servant (CPNS) exam preparation and school tutoring (SD/SMP/SMA). Students purchase packages via manual bank transfer, then access PDF materials, quizzes, and computer-based tryout (CBT) exams.
 
@@ -54,15 +54,15 @@ A full-stack e-learning platform for Indonesian civil servant (CPNS) exam prepar
 
 ## Demo accounts
 
-- Admin: `admin@siaplulus.id` / `admin123`
-- Tutor: `tutor@siaplulus.id` / `tutor123`
+- Admin: `admin@lulusin.id` / `admin123`
+- Tutor: `tutor@lulusin.id` / `tutor123`
 - Students: `andi@student.id`, `siti@student.id`, `reza@student.id` / `student123`
 
 ## User preferences
 
 - Indonesian language for all UI text
 - Rupiah formatting: "Rp 499.000" (period as thousand separator)
-- Brand name: SiapLulus
+- Brand name: Lulusin
 
 ## Gotchas
 

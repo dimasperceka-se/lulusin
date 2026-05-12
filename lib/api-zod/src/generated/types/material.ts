@@ -14,6 +14,16 @@ export interface Material {
   description?: string | null;
   /** @nullable */
   fileUrl?: string | null;
+  /**
+   * Inline markdown content (rendered client-side). When set, FE renders this instead of fileUrl.
+   * @nullable
+   */
+  content?: string | null;
+  /**
+   * Category for grouping in UI (e.g. "TWK", "TIU", "TKP", "UMUM").
+   * @nullable
+   */
+  category?: string | null;
   orderIndex: number;
   createdAt: string;
   /** @nullable */

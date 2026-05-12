@@ -1,0 +1,476 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { 
+  useSubscriptionPlans, 
+  useCreatePayment, 
+  usePaymentStatus,
+  useActiveSubscription,
+  useListeningStatus
+} from "@/hooks/use-subscription";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, ExternalLink, AlertTriangle, Wrench } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Payment methods available through DOKU Checkout
+const PAYMENT_METHODS = [
+  { name: "QRIS", logo: "📱" },
+  { name: "BCA VA", logo: "🏦" },
+  { name: "Mandiri VA", logo: "🏦" },
+  { name: "BRI VA", logo: "🏦" },
+  { name: "BNI VA", logo: "🏦" },
+  { name: "ShopeePay", logo: "🧡" },
+  { name: "OVO", logo: "💜" },
+];
+
+type PaymentState = "idle" | "pending" | "paid" | "expired" | "failed";
+
+interface DokuPaymentProps {
+  onSuccess?: () => void;
+  onClose?: () => void;
+}
+
+export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { data: plans, isLoading: plansLoading } = useSubscriptionPlans();
+  const { data: activeSubscription } = useActiveSubscription();
+  const { data: listeningStatus } = useListeningStatus();
+  const createPayment = useCreatePayment();
+  
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [currentTransaction, setCurrentTransaction] = useState<number | null>(null);
+  const [paymentState, setPaymentState] = useState<PaymentState>("idle");
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [paymentUrl, setPaymentUrl] = useState<string>("");
+
+  // Poll payment status
+  const { data: paymentStatus } = usePaymentStatus(
+    currentTransaction, 
+    paymentState === "pending"
+  );
+
+  // Handle payment status changes
+  useEffect(() => {
+    if (!paymentStatus) return;
+
+    if (paymentStatus.status === "paid") {
+      setPaymentState("paid");
+      onSuccess?.();
+    } else if (paymentStatus.status === "expired") {
+      setPaymentState("expired");
+    } else if (paymentStatus.status === "failed") {
+      setPaymentState("failed");
+    }
+
+    // Update time left
+    if (paymentStatus.expiredAt && paymentStatus.status === "pending") {
+      const expiry = new Date(paymentStatus.expiredAt).getTime();
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((expiry - now) / 1000));
+      setTimeLeft(remaining);
+    }
+  }, [paymentStatus, onSuccess]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (paymentState !== "pending" || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setPaymentState("expired");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paymentState, timeLeft]);
+
+  // Format time as HH:MM:SS or MM:SS
+  const formatTime = (seconds: number): string => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Format price to Indonesian Rupiah
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Handle plan selection and payment creation
+  const handleSelectPlan = async (planId: number) => {
+    if (!user) {
+      setLocation("/auth/signin");
+      return;
+    }
+
+    setSelectedPlanId(planId);
+    
+    try {
+      const transaction = await createPayment.mutateAsync(planId);
+      setCurrentTransaction(transaction.id);
+      setPaymentUrl(transaction.dokuPaymentUrl || "");
+      setPaymentState("pending");
+      
+      // Set initial countdown
+      if (transaction.expiredAt) {
+        const expiry = new Date(transaction.expiredAt).getTime();
+        const now = Date.now();
+        setTimeLeft(Math.max(0, Math.floor((expiry - now) / 1000)));
+      } else {
+        setTimeLeft(60 * 60); // Default 1 hour
+      }
+      
+      // Open DOKU payment page in new tab
+      if (transaction.dokuPaymentUrl) {
+        window.open(transaction.dokuPaymentUrl, '_blank');
+      }
+    } catch (error: any) {
+      console.error("Payment creation failed:", error);
+      alert(error.message || "Gagal membuat pembayaran");
+    }
+  };
+
+  // Reset payment state
+  const handleReset = () => {
+    setPaymentState("idle");
+    setSelectedPlanId(null);
+    setCurrentTransaction(null);
+    setPaymentUrl("");
+    setTimeLeft(0);
+  };
+
+  // If user has active subscription
+  if (activeSubscription && new Date(activeSubscription.endDate) > new Date()) {
+    return (
+      <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200 dark:border-yellow-800">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-16 h-16 bg-yellow-100 dark:bg-yellow-900/50 rounded-full flex items-center justify-center mb-4">
+            <Crown className="w-8 h-8 text-yellow-600" />
+          </div>
+          <CardTitle className="text-yellow-700 dark:text-yellow-400">Anda Sudah Berlangganan!</CardTitle>
+          <CardDescription>
+            Langganan aktif sampai: {new Date(activeSubscription.endDate).toLocaleDateString("id-ID", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <Badge variant="secondary" className="text-lg px-4 py-2">
+            <Music className="w-4 h-4 mr-2" />
+            Unlimited Listening
+          </Badge>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Loading state
+  if (plansLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Payment success state
+  if (paymentState === "paid") {
+    return (
+      <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-20 h-20 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mb-4 animate-bounce">
+            <CheckCircle className="w-12 h-12 text-green-600" />
+          </div>
+          <CardTitle className="text-green-700 dark:text-green-400 text-2xl">Pembayaran Berhasil!</CardTitle>
+          <CardDescription className="text-green-600 dark:text-green-300">
+            Terima kasih telah berlangganan Storify Premium
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Sekarang Anda dapat menikmati unlimited audiobook tanpa batasan!
+          </p>
+          <Button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700">
+            Mulai Mendengarkan
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Payment expired/failed state
+  if (paymentState === "expired" || paymentState === "failed") {
+    return (
+      <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-20 h-20 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center mb-4">
+            <XCircle className="w-12 h-12 text-red-600" />
+          </div>
+          <CardTitle className="text-red-700 dark:text-red-400 text-2xl">
+            {paymentState === "expired" ? "Waktu Habis" : "Pembayaran Gagal"}
+          </CardTitle>
+          <CardDescription className="text-red-600 dark:text-red-300">
+            {paymentState === "expired" 
+              ? "Halaman pembayaran sudah kedaluwarsa. Silakan coba lagi."
+              : "Terjadi kesalahan dalam pembayaran. Silakan coba lagi."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <Button onClick={handleReset} variant="outline" className="w-full">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Coba Lagi
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Payment page display (pending payment)
+  if (paymentState === "pending" && paymentUrl) {
+    const selectedPlan = plans?.find(p => p.id === selectedPlanId);
+    
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle>Selesaikan Pembayaran</CardTitle>
+          <CardDescription>
+            {selectedPlan?.name} - {formatPrice(selectedPlan?.price || 0)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Payment link */}
+          <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
+            <div className="flex items-center justify-center w-16 h-16 bg-white dark:bg-gray-800 rounded-xl shadow-md">
+              <img 
+                src="https://dashboard.doku.com/docs/img/doku-logo.svg" 
+                alt="DOKU" 
+                className="w-10 h-10"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+            <div className="text-center space-y-2">
+              <p className="font-medium">Halaman pembayaran DOKU telah dibuka</p>
+              <p className="text-sm text-muted-foreground">Pilih metode pembayaran dan selesaikan di tab baru</p>
+            </div>
+            <Button 
+              onClick={() => window.open(paymentUrl, '_blank')}
+              className="w-full max-w-xs"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Buka Halaman Pembayaran
+            </Button>
+          </div>
+
+          {/* Countdown */}
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 text-lg font-medium">
+              <Clock className="w-5 h-5 text-orange-500" />
+              <span className={cn(
+                "font-mono text-xl",
+                timeLeft < 300 ? "text-red-500" : "text-orange-500"
+              )}>
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Selesaikan pembayaran sebelum waktu habis
+            </p>
+          </div>
+
+          {/* Payment methods */}
+          <div className="space-y-2">
+            <p className="text-sm text-center text-muted-foreground">
+              Metode pembayaran yang tersedia:
+            </p>
+            <div className="flex justify-center gap-2 flex-wrap">
+              {PAYMENT_METHODS.map((method) => (
+                <div 
+                  key={method.name}
+                  className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-xs"
+                >
+                  <span>{method.logo}</span>
+                  <span className="text-[10px]">{method.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Status indicator */}
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Menunggu pembayaran...
+          </div>
+
+          {/* Instructions */}
+          <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+            <p className="font-medium">Cara Pembayaran:</p>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+              <li>Pilih metode pembayaran di halaman DOKU</li>
+              <li>Selesaikan pembayaran sesuai instruksi</li>
+              <li>Subscription akan aktif otomatis setelah pembayaran berhasil</li>
+            </ol>
+          </div>
+
+          {/* Cancel button */}
+          <Button variant="outline" onClick={handleReset} className="w-full">
+            Batal
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Plan selection (idle state)
+  return (
+    <div className="space-y-6 relative">
+      {/* Under Maintenance Notification - Modern Style */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/40 p-6 shadow-lg">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/20 dark:bg-amber-700/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-200/20 dark:bg-orange-700/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+        <div className="relative flex items-start gap-4">
+          <div className="flex-shrink-0 w-14 h-14 bg-amber-100 dark:bg-amber-900/50 rounded-2xl flex items-center justify-center shadow-sm">
+            <Wrench className="w-7 h-7 text-amber-600 dark:text-amber-400 animate-pulse" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-amber-900 dark:text-amber-200 text-lg">Under Maintenance</h3>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 dark:bg-amber-800/60 text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="w-3 h-3" />
+                Sementara
+              </span>
+            </div>
+            <p className="text-sm text-amber-700 dark:text-amber-300/80 leading-relaxed">
+              Pembayaran melalui DOKU sedang dalam perbaikan. Silakan gunakan metode pembayaran <strong>QRIS</strong> yang tersedia di tab sebelah.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="text-center space-y-2 opacity-50 pointer-events-none">
+        <h2 className="text-2xl font-bold">Pilih Paket Langganan</h2>
+        <p className="text-muted-foreground">
+          Nikmati unlimited audiobook dengan berlangganan Storify Premium
+        </p>
+        {listeningStatus && !listeningStatus.hasSubscription && (
+          <Badge variant="outline" className="mt-2">
+            {user 
+              ? `Sisa ${listeningStatus.limit! - listeningStatus.listenCount} dari ${listeningStatus.limit} buku gratis`
+              : `Guest: ${listeningStatus.listenCount}/${listeningStatus.limit} buku didengarkan`}
+          </Badge>
+        )}
+      </div>
+
+      {/* Plans - Disabled during maintenance */}
+      <div className="grid gap-4 md:grid-cols-3 opacity-50 pointer-events-none select-none">
+        {plans?.map((plan) => {
+          const isPopular = plan.name.toLowerCase().includes("bulanan");
+          const pricePerDay = Math.round(plan.price / plan.durationDays);
+          
+          return (
+            <Card 
+              key={plan.id}
+              className={cn(
+                "relative transition-all hover:shadow-lg cursor-pointer",
+                isPopular && "border-primary ring-2 ring-primary ring-offset-2",
+                selectedPlanId === plan.id && "bg-primary/5"
+              )}
+              onClick={() => setSelectedPlanId(plan.id)}
+            >
+              {isPopular && (
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                  BEST VALUE
+                </Badge>
+              )}
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="text-lg">{plan.name}</CardTitle>
+                <CardDescription>{plan.durationDays} hari</CardDescription>
+              </CardHeader>
+              <CardContent className="text-center space-y-4">
+                <div>
+                  <p className="text-3xl font-bold text-primary">
+                    {formatPrice(plan.price)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatPrice(pricePerDay)}/hari
+                  </p>
+                </div>
+                
+                <ul className="text-sm text-left space-y-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Unlimited audiobook
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Akses semua kategori
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Continue listening
+                  </li>
+                </ul>
+
+                <Button 
+                  className="w-full"
+                  variant={selectedPlanId === plan.id ? "default" : "outline"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectPlan(plan.id);
+                  }}
+                  disabled={createPayment.isPending}
+                >
+                  {createPayment.isPending && selectedPlanId === plan.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Pilih Paket"
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Powered by DOKU */}
+      <div className="text-center">
+        <p className="text-xs text-muted-foreground">
+          Pembayaran diproses oleh <strong>DOKU</strong> — Payment Gateway terpercaya sejak 2007
+        </p>
+      </div>
+
+      {/* Login prompt for guests */}
+      {!user && (
+        <div className="text-center p-4 bg-muted rounded-lg">
+          <p className="text-sm text-muted-foreground">
+            Anda harus login terlebih dahulu untuk berlangganan
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

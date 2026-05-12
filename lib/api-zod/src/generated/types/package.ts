@@ -17,6 +17,8 @@ export interface Package {
   /** @nullable */
   thumbnail?: string | null;
   isActive: boolean;
+  /** When true, package is visible but checkout is disabled. */
+  maintenanceMode: boolean;
   createdAt: string;
   /** @nullable */
   materialCount?: number | null;

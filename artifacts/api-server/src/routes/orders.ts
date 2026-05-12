@@ -2,10 +2,12 @@ import { Router } from "express";
 import { db, ordersTable, enrollmentsTable, packagesTable, bankAccountsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middlewares/auth";
-import { CreateOrderBody, UploadPaymentProofBody, VerifyOrderBody, ListOrdersQueryParams } from "@workspace/api-zod";
+import { CreateOrderBody, UploadPaymentProofBody, VerifyOrderBody, ListOrdersQueryParams, UpdateOrderMethodBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
 
 const router = Router();
+
+const QRIS_API_URL = "https://qris.interactive.co.id/restapi/qris/show_qris.php";
 
 function generateOrderCode(): string {
   const now = new Date();
@@ -14,9 +16,53 @@ function generateOrderCode(): string {
   return `INV-${date}-${random}`;
 }
 
-function generateUniqueAmount(baseAmount: number): number {
-  const suffix = Math.floor(100 + Math.random() * 900);
-  return baseAmount + suffix;
+function generateUniqueAmount(): number {
+  return Math.floor(100 + Math.random() * 900);
+}
+
+type QrisGenerated = {
+  qrisContent: string;
+  qrisInvoiceId: string;
+  qrisNmid: string;
+  qrisGeneratedAt: Date;
+};
+
+async function generateQris(orderCode: string, amount: number): Promise<QrisGenerated> {
+  const apiKey = process.env.QRIS_INTERACTIVE_API_KEY;
+  const mID = process.env.QRIS_INTERACTIVE_MID;
+  if (!apiKey || !mID) {
+    throw new Error("QRIS provider not configured (missing QRIS_INTERACTIVE_API_KEY or QRIS_INTERACTIVE_MID)");
+  }
+
+  const params = new URLSearchParams({
+    do: "create-invoice",
+    apikey: apiKey,
+    mID: mID,
+    cliTrxNumber: orderCode,
+    cliTrxAmount: String(amount),
+    useTip: "no",
+  });
+
+  const resp = await fetch(`${QRIS_API_URL}?${params.toString()}`, { method: "GET" });
+  if (!resp.ok) {
+    throw new Error(`QRIS provider HTTP ${resp.status}`);
+  }
+  const json = await resp.json() as { status: string; data: Record<string, string> };
+  if (json.status !== "success" || !json.data?.qris_content) {
+    throw new Error(`QRIS provider error: ${json.data?.qris_status ?? "unknown"}`);
+  }
+  return {
+    qrisContent: json.data.qris_content,
+    qrisInvoiceId: json.data.qris_invoiceid,
+    qrisNmid: json.data.qris_nmid,
+    qrisGeneratedAt: new Date(),
+  };
+}
+
+async function enrichOrder(order: typeof ordersTable.$inferSelect) {
+  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, order.packageId));
+  const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
+  return { ...order, package: pkg, bankAccounts };
 }
 
 router.get("/orders", authenticate, async (req, res): Promise<void> => {
@@ -39,13 +85,9 @@ router.get("/orders", authenticate, async (req, res): Promise<void> => {
 
   const rows = await db.select().from(ordersTable).where(whereClause).orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
 
-  const ordersWithPackage = await Promise.all(rows.map(async (order) => {
-    const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, order.packageId));
-    const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
-    return { ...order, package: pkg, bankAccounts };
-  }));
+  const orders = await Promise.all(rows.map(enrichOrder));
 
-  res.json({ orders: ordersWithPackage, total: Number(count), page, limit });
+  res.json({ orders, total: Number(count), page, limit });
 });
 
 router.post("/orders", authenticate, requireRole("student"), async (req, res): Promise<void> => {
@@ -72,20 +114,34 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
   const expiredAt = new Date();
   expiredAt.setHours(expiredAt.getHours() + 24);
 
+  const uniqueAmount = generateUniqueAmount();
+  const paymentMethod = parsed.data.paymentMethod ?? "BANK_TRANSFER";
+  const orderCode = generateOrderCode();
+
+  let qrisFields: Partial<QrisGenerated> = {};
+  if (paymentMethod === "QRIS") {
+    try {
+      qrisFields = await generateQris(orderCode, pkg.price + uniqueAmount);
+    } catch (e) {
+      logger.error({ err: e }, "Failed to generate QRIS at order creation");
+      res.status(503).json({ error: "QRIS provider unavailable. Pilih Transfer Bank atau coba lagi." });
+      return;
+    }
+  }
+
   const [order] = await db.insert(ordersTable).values({
     userId: req.user!.userId,
     packageId: parsed.data.packageId,
-    orderCode: generateOrderCode(),
+    orderCode,
     amount: pkg.price,
-    uniqueAmount: generateUniqueAmount(pkg.price),
+    uniqueAmount,
+    paymentMethod,
     status: "PENDING",
     expiredAt,
+    ...qrisFields,
   }).returning();
 
-  const [pkgData] = await db.select().from(packagesTable).where(eq(packagesTable.id, order.packageId));
-  const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
-
-  res.status(201).json({ ...order, package: pkgData, bankAccounts });
+  res.status(201).json(await enrichOrder(order));
 });
 
 router.get("/orders/:id", authenticate, async (req, res): Promise<void> => {
@@ -103,9 +159,48 @@ router.get("/orders/:id", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, order.packageId));
-  const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
-  res.json({ ...order, package: pkg, bankAccounts });
+  res.json(await enrichOrder(order));
+});
+
+router.patch("/orders/:id/method", authenticate, requireRole("student"), async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const parsed = UpdateOrderMethodBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [order] = await db.select().from(ordersTable).where(and(eq(ordersTable.id, id), eq(ordersTable.userId, req.user!.userId)));
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (order.status !== "PENDING") {
+    res.status(400).json({ error: "Can only change method while order is PENDING" });
+    return;
+  }
+
+  let qrisFields: Partial<QrisGenerated> & { qrisContent?: string | null } = {};
+  if (parsed.data.paymentMethod === "QRIS") {
+    const QR_TTL_MS = 30 * 60 * 1000;
+    const stale = !order.qrisContent || !order.qrisGeneratedAt || (Date.now() - new Date(order.qrisGeneratedAt).getTime() > QR_TTL_MS);
+    if (stale) {
+      try {
+        qrisFields = await generateQris(order.orderCode, order.amount + order.uniqueAmount);
+      } catch (e) {
+        logger.error({ err: e, orderId: id }, "Failed to generate QRIS on method switch");
+        res.status(503).json({ error: "QRIS provider unavailable. Pilih Transfer Bank atau coba lagi." });
+        return;
+      }
+    }
+  }
+
+  const [updated] = await db.update(ordersTable).set({
+    paymentMethod: parsed.data.paymentMethod,
+    ...qrisFields,
+  }).where(eq(ordersTable.id, id)).returning();
+
+  res.json(await enrichOrder(updated));
 });
 
 router.post("/orders/:id/upload-proof", authenticate, requireRole("student"), async (req, res): Promise<void> => {
@@ -131,9 +226,7 @@ router.post("/orders/:id/upload-proof", authenticate, requireRole("student"), as
     status: "WAITING_VERIFICATION",
   }).where(eq(ordersTable.id, id)).returning();
 
-  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, updated.packageId));
-  const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
-  res.json({ ...updated, package: pkg, bankAccounts });
+  res.json(await enrichOrder(updated));
 });
 
 router.post("/orders/:id/verify", authenticate, requireRole("admin"), async (req, res): Promise<void> => {
@@ -171,9 +264,7 @@ router.post("/orders/:id/verify", authenticate, requireRole("admin"), async (req
 
     logger.info({ orderId: id, userId: order.userId }, "Order approved, enrollment created");
 
-    const [pkgData] = await db.select().from(packagesTable).where(eq(packagesTable.id, updated.packageId));
-    const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
-    res.json({ ...updated, package: pkgData, bankAccounts });
+    res.json(await enrichOrder(updated));
   } else {
     const [updated] = await db.update(ordersTable).set({
       status: "REJECTED",
@@ -183,9 +274,7 @@ router.post("/orders/:id/verify", authenticate, requireRole("admin"), async (req
 
     logger.info({ orderId: id }, "Order rejected");
 
-    const [pkgData] = await db.select().from(packagesTable).where(eq(packagesTable.id, updated.packageId));
-    const bankAccounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.isActive, true));
-    res.json({ ...updated, package: pkgData, bankAccounts });
+    res.json(await enrichOrder(updated));
   }
 });
 

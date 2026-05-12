@@ -18,5 +18,6 @@ export interface User {
   avatar?: string | null;
   /** @nullable */
   targetInstitution?: string | null;
+  isEmailVerified: boolean;
   createdAt: string;
 }

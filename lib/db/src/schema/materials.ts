@@ -11,6 +11,8 @@ export const materialsTable = pgTable("materials", {
   title: text("title").notNull(),
   description: text("description"),
   fileUrl: text("file_url"),
+  content: text("content"),
+  category: text("category"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

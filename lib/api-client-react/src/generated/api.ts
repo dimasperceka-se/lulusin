@@ -27,6 +27,9 @@ import type {
   BankAccountUpdate,
   Enrollment,
   ErrorResponse,
+  ForgotPasswordInput,
+  ForgotPasswordResult,
+  GetQrisStatus200,
   HealthStatus,
   ListAttemptsParams,
   ListOrdersParams,
@@ -42,6 +45,7 @@ import type {
   Order,
   OrderInput,
   OrderList,
+  OrderMethodInput,
   OrderVerifyInput,
   Package,
   PackageDetail,
@@ -49,6 +53,9 @@ import type {
   PackageProgress,
   PackageUpdate,
   PaymentProofInput,
+  PreTestQuestion,
+  PreTestResult,
+  PreTestSubmitInput,
   ProfileUpdate,
   Question,
   QuestionInput,
@@ -61,6 +68,9 @@ import type {
   QuizUpdate,
   RankingEntry,
   RegisterInput,
+  ResendVerificationInput,
+  ResendVerificationResult,
+  ResetPasswordInput,
   RevenueData,
   ScoreHistoryPoint,
   StudentDashboard,
@@ -72,6 +82,7 @@ import type {
   User,
   UserList,
   UserUpdate,
+  VerifyEmailInput,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -82,6 +93,167 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Get 15 random questions (5 TWK + 5 TIU + 5 TKP) without correct answers
+ */
+export const getGetPreTestQuestionsUrl = () => {
+  return `/api/pre-test/questions`;
+};
+
+export const getPreTestQuestions = async (
+  options?: RequestInit,
+): Promise<PreTestQuestion[]> => {
+  return customFetch<PreTestQuestion[]>(getGetPreTestQuestionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPreTestQuestionsQueryKey = () => {
+  return [`/api/pre-test/questions`] as const;
+};
+
+export const getGetPreTestQuestionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPreTestQuestions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPreTestQuestions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPreTestQuestionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPreTestQuestions>>
+  > = ({ signal }) => getPreTestQuestions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPreTestQuestions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPreTestQuestionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPreTestQuestions>>
+>;
+export type GetPreTestQuestionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get 15 random questions (5 TWK + 5 TIU + 5 TKP) without correct answers
+ */
+
+export function useGetPreTestQuestions<
+  TData = Awaited<ReturnType<typeof getPreTestQuestions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPreTestQuestions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPreTestQuestionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit answers, get score + estimate + probability
+ */
+export const getSubmitPreTestUrl = () => {
+  return `/api/pre-test/submit`;
+};
+
+export const submitPreTest = async (
+  preTestSubmitInput: PreTestSubmitInput,
+  options?: RequestInit,
+): Promise<PreTestResult> => {
+  return customFetch<PreTestResult>(getSubmitPreTestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(preTestSubmitInput),
+  });
+};
+
+export const getSubmitPreTestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitPreTest>>,
+    TError,
+    { data: BodyType<PreTestSubmitInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitPreTest>>,
+  TError,
+  { data: BodyType<PreTestSubmitInput> },
+  TContext
+> => {
+  const mutationKey = ["submitPreTest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitPreTest>>,
+    { data: BodyType<PreTestSubmitInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitPreTest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitPreTestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitPreTest>>
+>;
+export type SubmitPreTestMutationBody = BodyType<PreTestSubmitInput>;
+export type SubmitPreTestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Submit answers, get score + estimate + probability
+ */
+export const useSubmitPreTest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitPreTest>>,
+    TError,
+    { data: BodyType<PreTestSubmitInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitPreTest>>,
+  TError,
+  { data: BodyType<PreTestSubmitInput> },
+  TContext
+> => {
+  return useMutation(getSubmitPreTestMutationOptions(options));
+};
 
 /**
  * @summary Health check
@@ -477,6 +649,350 @@ export const useUpdateProfile = <
   TContext
 > => {
   return useMutation(getUpdateProfileMutationOptions(options));
+};
+
+/**
+ * @summary Verify email with token from email link
+ */
+export const getVerifyEmailUrl = () => {
+  return `/api/auth/verify-email`;
+};
+
+export const verifyEmail = async (
+  verifyEmailInput: VerifyEmailInput,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getVerifyEmailUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(verifyEmailInput),
+  });
+};
+
+export const getVerifyEmailMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyEmail>>,
+    TError,
+    { data: BodyType<VerifyEmailInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyEmail>>,
+  TError,
+  { data: BodyType<VerifyEmailInput> },
+  TContext
+> => {
+  const mutationKey = ["verifyEmail"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyEmail>>,
+    { data: BodyType<VerifyEmailInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyEmail(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyEmail>>
+>;
+export type VerifyEmailMutationBody = BodyType<VerifyEmailInput>;
+export type VerifyEmailMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Verify email with token from email link
+ */
+export const useVerifyEmail = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyEmail>>,
+    TError,
+    { data: BodyType<VerifyEmailInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof verifyEmail>>,
+  TError,
+  { data: BodyType<VerifyEmailInput> },
+  TContext
+> => {
+  return useMutation(getVerifyEmailMutationOptions(options));
+};
+
+/**
+ * @summary Re-issue email verification token (returns token for FE to email)
+ */
+export const getResendVerificationUrl = () => {
+  return `/api/auth/resend-verification`;
+};
+
+export const resendVerification = async (
+  resendVerificationInput: ResendVerificationInput,
+  options?: RequestInit,
+): Promise<ResendVerificationResult> => {
+  return customFetch<ResendVerificationResult>(getResendVerificationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resendVerificationInput),
+  });
+};
+
+export const getResendVerificationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendVerification>>,
+    TError,
+    { data: BodyType<ResendVerificationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resendVerification>>,
+  TError,
+  { data: BodyType<ResendVerificationInput> },
+  TContext
+> => {
+  const mutationKey = ["resendVerification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resendVerification>>,
+    { data: BodyType<ResendVerificationInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resendVerification(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResendVerificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resendVerification>>
+>;
+export type ResendVerificationMutationBody = BodyType<ResendVerificationInput>;
+export type ResendVerificationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Re-issue email verification token (returns token for FE to email)
+ */
+export const useResendVerification = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendVerification>>,
+    TError,
+    { data: BodyType<ResendVerificationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resendVerification>>,
+  TError,
+  { data: BodyType<ResendVerificationInput> },
+  TContext
+> => {
+  return useMutation(getResendVerificationMutationOptions(options));
+};
+
+/**
+ * @summary Issue password reset token (returns token for FE to email)
+ */
+export const getForgotPasswordUrl = () => {
+  return `/api/auth/forgot-password`;
+};
+
+export const forgotPassword = async (
+  forgotPasswordInput: ForgotPasswordInput,
+  options?: RequestInit,
+): Promise<ForgotPasswordResult> => {
+  return customFetch<ForgotPasswordResult>(getForgotPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(forgotPasswordInput),
+  });
+};
+
+export const getForgotPasswordMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    TError,
+    { data: BodyType<ForgotPasswordInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  { data: BodyType<ForgotPasswordInput> },
+  TContext
+> => {
+  const mutationKey = ["forgotPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    { data: BodyType<ForgotPasswordInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return forgotPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ForgotPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof forgotPassword>>
+>;
+export type ForgotPasswordMutationBody = BodyType<ForgotPasswordInput>;
+export type ForgotPasswordMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Issue password reset token (returns token for FE to email)
+ */
+export const useForgotPassword = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    TError,
+    { data: BodyType<ForgotPasswordInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  { data: BodyType<ForgotPasswordInput> },
+  TContext
+> => {
+  return useMutation(getForgotPasswordMutationOptions(options));
+};
+
+/**
+ * @summary Reset password using token from email
+ */
+export const getResetPasswordUrl = () => {
+  return `/api/auth/reset-password`;
+};
+
+export const resetPassword = async (
+  resetPasswordInput: ResetPasswordInput,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getResetPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resetPasswordInput),
+  });
+};
+
+export const getResetPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    { data: BodyType<ResetPasswordInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  { data: BodyType<ResetPasswordInput> },
+  TContext
+> => {
+  const mutationKey = ["resetPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPassword>>,
+    { data: BodyType<ResetPasswordInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetPassword>>
+>;
+export type ResetPasswordMutationBody = BodyType<ResetPasswordInput>;
+export type ResetPasswordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Reset password using token from email
+ */
+export const useResetPassword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    { data: BodyType<ResetPasswordInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  { data: BodyType<ResetPasswordInput> },
+  TContext
+> => {
+  return useMutation(getResetPasswordMutationOptions(options));
 };
 
 /**
@@ -2028,6 +2544,168 @@ export const useVerifyOrder = <
   TContext
 > => {
   return useMutation(getVerifyOrderMutationOptions(options));
+};
+
+/**
+ * @summary Check whether QRIS Interactive credentials are configured (admin)
+ */
+export const getGetQrisStatusUrl = () => {
+  return `/api/admin/qris-status`;
+};
+
+export const getQrisStatus = async (
+  options?: RequestInit,
+): Promise<GetQrisStatus200> => {
+  return customFetch<GetQrisStatus200>(getGetQrisStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetQrisStatusQueryKey = () => {
+  return [`/api/admin/qris-status`] as const;
+};
+
+export const getGetQrisStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQrisStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getQrisStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQrisStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getQrisStatus>>> = ({
+    signal,
+  }) => getQrisStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getQrisStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetQrisStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getQrisStatus>>
+>;
+export type GetQrisStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Check whether QRIS Interactive credentials are configured (admin)
+ */
+
+export function useGetQrisStatus<
+  TData = Awaited<ReturnType<typeof getQrisStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getQrisStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetQrisStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update payment method on a pending order (student)
+ */
+export const getUpdateOrderMethodUrl = (id: number) => {
+  return `/api/orders/${id}/method`;
+};
+
+export const updateOrderMethod = async (
+  id: number,
+  orderMethodInput: OrderMethodInput,
+  options?: RequestInit,
+): Promise<Order> => {
+  return customFetch<Order>(getUpdateOrderMethodUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(orderMethodInput),
+  });
+};
+
+export const getUpdateOrderMethodMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOrderMethod>>,
+    TError,
+    { id: number; data: BodyType<OrderMethodInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateOrderMethod>>,
+  TError,
+  { id: number; data: BodyType<OrderMethodInput> },
+  TContext
+> => {
+  const mutationKey = ["updateOrderMethod"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateOrderMethod>>,
+    { id: number; data: BodyType<OrderMethodInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateOrderMethod(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateOrderMethodMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateOrderMethod>>
+>;
+export type UpdateOrderMethodMutationBody = BodyType<OrderMethodInput>;
+export type UpdateOrderMethodMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update payment method on a pending order (student)
+ */
+export const useUpdateOrderMethod = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOrderMethod>>,
+    TError,
+    { id: number; data: BodyType<OrderMethodInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateOrderMethod>>,
+  TError,
+  { id: number; data: BodyType<OrderMethodInput> },
+  TContext
+> => {
+  return useMutation(getUpdateOrderMethodMutationOptions(options));
 };
 
 /**

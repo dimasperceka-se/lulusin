@@ -8,6 +8,59 @@
 import * as zod from "zod";
 
 /**
+ * @summary Get 15 random questions (5 TWK + 5 TIU + 5 TKP) without correct answers
+ */
+export const GetPreTestQuestionsResponseItem = zod.object({
+  id: zod.number(),
+  questionText: zod.string(),
+  optionA: zod.string(),
+  optionB: zod.string(),
+  optionC: zod.string(),
+  optionD: zod.string(),
+  optionE: zod.string(),
+  category: zod.string(),
+});
+export const GetPreTestQuestionsResponse = zod.array(
+  GetPreTestQuestionsResponseItem,
+);
+
+/**
+ * @summary Submit answers, get score + estimate + probability
+ */
+export const SubmitPreTestBody = zod.object({
+  answers: zod.array(
+    zod.object({
+      questionId: zod.number(),
+      answer: zod.enum(["A", "B", "C", "D", "E"]),
+    }),
+  ),
+});
+
+export const SubmitPreTestResponse = zod.object({
+  totalCorrect: zod.number(),
+  totalQuestions: zod.number(),
+  breakdown: zod.object({
+    TWK: zod.object({
+      correct: zod.number(),
+      total: zod.number(),
+    }),
+    TIU: zod.object({
+      correct: zod.number(),
+      total: zod.number(),
+    }),
+    TKP: zod.object({
+      correct: zod.number(),
+      total: zod.number(),
+    }),
+  }),
+  monthsWithoutCourse: zod.number(),
+  monthsWithCourse: zod.number(),
+  probabilityWithoutCourse: zod.number(),
+  probabilityWithCourse: zod.number(),
+  recommendation: zod.string(),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -43,8 +96,15 @@ export const LoginResponse = zod.object({
     role: zod.enum(["admin", "tutor", "student"]),
     avatar: zod.string().nullish(),
     targetInstitution: zod.string().nullish(),
+    isEmailVerified: zod.boolean(),
     createdAt: zod.string(),
   }),
+  verificationToken: zod
+    .string()
+    .nullish()
+    .describe(
+      "Email verification token; only present on \/auth\/register. Frontend uses this to send the verify email via EmailJS.",
+    ),
 });
 
 /**
@@ -58,6 +118,7 @@ export const GetMeResponse = zod.object({
   role: zod.enum(["admin", "tutor", "student"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
+  isEmailVerified: zod.boolean(),
   createdAt: zod.string(),
 });
 
@@ -79,6 +140,72 @@ export const UpdateProfileResponse = zod.object({
   role: zod.enum(["admin", "tutor", "student"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
+  isEmailVerified: zod.boolean(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Verify email with token from email link
+ */
+export const VerifyEmailBody = zod.object({
+  token: zod.string(),
+});
+
+export const VerifyEmailResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  role: zod.enum(["admin", "tutor", "student"]),
+  avatar: zod.string().nullish(),
+  targetInstitution: zod.string().nullish(),
+  isEmailVerified: zod.boolean(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Re-issue email verification token (returns token for FE to email)
+ */
+export const ResendVerificationBody = zod.object({
+  email: zod.string(),
+});
+
+export const ResendVerificationResponse = zod.object({
+  verificationToken: zod.string(),
+  email: zod.string(),
+  name: zod.string(),
+});
+
+/**
+ * @summary Issue password reset token (returns token for FE to email)
+ */
+export const ForgotPasswordBody = zod.object({
+  email: zod.string(),
+});
+
+export const ForgotPasswordResponse = zod.object({
+  resetToken: zod.string(),
+  email: zod.string(),
+  name: zod.string(),
+});
+
+/**
+ * @summary Reset password using token from email
+ */
+export const ResetPasswordBody = zod.object({
+  token: zod.string(),
+  newPassword: zod.string(),
+});
+
+export const ResetPasswordResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  role: zod.enum(["admin", "tutor", "student"]),
+  avatar: zod.string().nullish(),
+  targetInstitution: zod.string().nullish(),
+  isEmailVerified: zod.boolean(),
   createdAt: zod.string(),
 });
 
@@ -102,6 +229,7 @@ export const ListUsersResponse = zod.object({
       role: zod.enum(["admin", "tutor", "student"]),
       avatar: zod.string().nullish(),
       targetInstitution: zod.string().nullish(),
+      isEmailVerified: zod.boolean(),
       createdAt: zod.string(),
     }),
   ),
@@ -125,6 +253,7 @@ export const GetUserResponse = zod.object({
   role: zod.enum(["admin", "tutor", "student"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
+  isEmailVerified: zod.boolean(),
   createdAt: zod.string(),
 });
 
@@ -150,6 +279,7 @@ export const UpdateUserResponse = zod.object({
   role: zod.enum(["admin", "tutor", "student"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
+  isEmailVerified: zod.boolean(),
   createdAt: zod.string(),
 });
 
@@ -178,6 +308,9 @@ export const ListPackagesResponseItem = zod.object({
   category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
   thumbnail: zod.string().nullish(),
   isActive: zod.boolean(),
+  maintenanceMode: zod
+    .boolean()
+    .describe("When true, package is visible but checkout is disabled."),
   createdAt: zod.string(),
   materialCount: zod.number().nullish(),
   quizCount: zod.number().nullish(),
@@ -214,6 +347,7 @@ export const GetPackageResponse = zod.object({
   category: zod.string(),
   thumbnail: zod.string().nullish(),
   isActive: zod.boolean(),
+  maintenanceMode: zod.boolean(),
   createdAt: zod.string(),
   materials: zod.array(
     zod.object({
@@ -222,6 +356,18 @@ export const GetPackageResponse = zod.object({
       title: zod.string(),
       description: zod.string().nullish(),
       fileUrl: zod.string().nullish(),
+      content: zod
+        .string()
+        .nullish()
+        .describe(
+          "Inline markdown content (rendered client-side). When set, FE renders this instead of fileUrl.",
+        ),
+      category: zod
+        .string()
+        .nullish()
+        .describe(
+          'Category for grouping in UI (e.g. \"TWK\", \"TIU\", \"TKP\", \"UMUM\").',
+        ),
       orderIndex: zod.number(),
       createdAt: zod.string(),
       isRead: zod.boolean().nullish(),
@@ -280,6 +426,9 @@ export const UpdatePackageResponse = zod.object({
   category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
   thumbnail: zod.string().nullish(),
   isActive: zod.boolean(),
+  maintenanceMode: zod
+    .boolean()
+    .describe("When true, package is visible but checkout is disabled."),
   createdAt: zod.string(),
   materialCount: zod.number().nullish(),
   quizCount: zod.number().nullish(),
@@ -369,11 +518,21 @@ export const ListOrdersResponse = zod.object({
         "EXPIRED",
         "REJECTED",
       ]),
+      paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]),
       paymentProof: zod.string().nullish(),
       expiredAt: zod.string(),
       paidAt: zod.string().nullish(),
       rejectionReason: zod.string().nullish(),
       createdAt: zod.string(),
+      qrisContent: zod
+        .string()
+        .nullish()
+        .describe(
+          "Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.",
+        ),
+      qrisInvoiceId: zod.string().nullish(),
+      qrisNmid: zod.string().nullish(),
+      qrisGeneratedAt: zod.string().nullish(),
       package: zod
         .object({
           id: zod.number(),
@@ -384,6 +543,11 @@ export const ListOrdersResponse = zod.object({
           category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
           thumbnail: zod.string().nullish(),
           isActive: zod.boolean(),
+          maintenanceMode: zod
+            .boolean()
+            .describe(
+              "When true, package is visible but checkout is disabled.",
+            ),
           createdAt: zod.string(),
           materialCount: zod.number().nullish(),
           quizCount: zod.number().nullish(),
@@ -413,6 +577,7 @@ export const ListOrdersResponse = zod.object({
  */
 export const CreateOrderBody = zod.object({
   packageId: zod.number(),
+  paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]).optional(),
 });
 
 /**
@@ -436,11 +601,21 @@ export const GetOrderResponse = zod.object({
     "EXPIRED",
     "REJECTED",
   ]),
+  paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]),
   paymentProof: zod.string().nullish(),
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
   createdAt: zod.string(),
+  qrisContent: zod
+    .string()
+    .nullish()
+    .describe(
+      "Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.",
+    ),
+  qrisInvoiceId: zod.string().nullish(),
+  qrisNmid: zod.string().nullish(),
+  qrisGeneratedAt: zod.string().nullish(),
   package: zod
     .object({
       id: zod.number(),
@@ -451,6 +626,9 @@ export const GetOrderResponse = zod.object({
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
       isActive: zod.boolean(),
+      maintenanceMode: zod
+        .boolean()
+        .describe("When true, package is visible but checkout is disabled."),
       createdAt: zod.string(),
       materialCount: zod.number().nullish(),
       quizCount: zod.number().nullish(),
@@ -495,11 +673,21 @@ export const UploadPaymentProofResponse = zod.object({
     "EXPIRED",
     "REJECTED",
   ]),
+  paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]),
   paymentProof: zod.string().nullish(),
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
   createdAt: zod.string(),
+  qrisContent: zod
+    .string()
+    .nullish()
+    .describe(
+      "Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.",
+    ),
+  qrisInvoiceId: zod.string().nullish(),
+  qrisNmid: zod.string().nullish(),
+  qrisGeneratedAt: zod.string().nullish(),
   package: zod
     .object({
       id: zod.number(),
@@ -510,6 +698,9 @@ export const UploadPaymentProofResponse = zod.object({
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
       isActive: zod.boolean(),
+      maintenanceMode: zod
+        .boolean()
+        .describe("When true, package is visible but checkout is disabled."),
       createdAt: zod.string(),
       materialCount: zod.number().nullish(),
       quizCount: zod.number().nullish(),
@@ -555,11 +746,21 @@ export const VerifyOrderResponse = zod.object({
     "EXPIRED",
     "REJECTED",
   ]),
+  paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]),
   paymentProof: zod.string().nullish(),
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
   createdAt: zod.string(),
+  qrisContent: zod
+    .string()
+    .nullish()
+    .describe(
+      "Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.",
+    ),
+  qrisInvoiceId: zod.string().nullish(),
+  qrisNmid: zod.string().nullish(),
+  qrisGeneratedAt: zod.string().nullish(),
   package: zod
     .object({
       id: zod.number(),
@@ -570,6 +771,88 @@ export const VerifyOrderResponse = zod.object({
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
       isActive: zod.boolean(),
+      maintenanceMode: zod
+        .boolean()
+        .describe("When true, package is visible but checkout is disabled."),
+      createdAt: zod.string(),
+      materialCount: zod.number().nullish(),
+      quizCount: zod.number().nullish(),
+      tryoutCount: zod.number().nullish(),
+    })
+    .optional(),
+  bankAccounts: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        bankName: zod.string(),
+        accountNumber: zod.string(),
+        accountHolder: zod.string(),
+        isActive: zod.boolean(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Check whether QRIS Interactive credentials are configured (admin)
+ */
+export const GetQrisStatusResponse = zod.object({
+  configured: zod.boolean(),
+});
+
+/**
+ * @summary Update payment method on a pending order (student)
+ */
+export const UpdateOrderMethodParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateOrderMethodBody = zod.object({
+  paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]),
+});
+
+export const UpdateOrderMethodResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  packageId: zod.number(),
+  orderCode: zod.string(),
+  amount: zod.number(),
+  uniqueAmount: zod.number(),
+  status: zod.enum([
+    "PENDING",
+    "WAITING_VERIFICATION",
+    "PAID",
+    "EXPIRED",
+    "REJECTED",
+  ]),
+  paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]),
+  paymentProof: zod.string().nullish(),
+  expiredAt: zod.string(),
+  paidAt: zod.string().nullish(),
+  rejectionReason: zod.string().nullish(),
+  createdAt: zod.string(),
+  qrisContent: zod
+    .string()
+    .nullish()
+    .describe(
+      "Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.",
+    ),
+  qrisInvoiceId: zod.string().nullish(),
+  qrisNmid: zod.string().nullish(),
+  qrisGeneratedAt: zod.string().nullish(),
+  package: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      description: zod.string(),
+      price: zod.number(),
+      durationDays: zod.number(),
+      category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
+      thumbnail: zod.string().nullish(),
+      isActive: zod.boolean(),
+      maintenanceMode: zod
+        .boolean()
+        .describe("When true, package is visible but checkout is disabled."),
       createdAt: zod.string(),
       materialCount: zod.number().nullish(),
       quizCount: zod.number().nullish(),
@@ -609,6 +892,9 @@ export const ListEnrollmentsResponseItem = zod.object({
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
       isActive: zod.boolean(),
+      maintenanceMode: zod
+        .boolean()
+        .describe("When true, package is visible but checkout is disabled."),
       createdAt: zod.string(),
       materialCount: zod.number().nullish(),
       quizCount: zod.number().nullish(),
@@ -643,6 +929,9 @@ export const GetEnrollmentResponse = zod.object({
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
       isActive: zod.boolean(),
+      maintenanceMode: zod
+        .boolean()
+        .describe("When true, package is visible but checkout is disabled."),
       createdAt: zod.string(),
       materialCount: zod.number().nullish(),
       quizCount: zod.number().nullish(),
@@ -665,6 +954,18 @@ export const ListMaterialsResponseItem = zod.object({
   title: zod.string(),
   description: zod.string().nullish(),
   fileUrl: zod.string().nullish(),
+  content: zod
+    .string()
+    .nullish()
+    .describe(
+      "Inline markdown content (rendered client-side). When set, FE renders this instead of fileUrl.",
+    ),
+  category: zod
+    .string()
+    .nullish()
+    .describe(
+      'Category for grouping in UI (e.g. \"TWK\", \"TIU\", \"TKP\", \"UMUM\").',
+    ),
   orderIndex: zod.number(),
   createdAt: zod.string(),
   isRead: zod.boolean().nullish(),
@@ -705,6 +1006,18 @@ export const UpdateMaterialResponse = zod.object({
   title: zod.string(),
   description: zod.string().nullish(),
   fileUrl: zod.string().nullish(),
+  content: zod
+    .string()
+    .nullish()
+    .describe(
+      "Inline markdown content (rendered client-side). When set, FE renders this instead of fileUrl.",
+    ),
+  category: zod
+    .string()
+    .nullish()
+    .describe(
+      'Category for grouping in UI (e.g. \"TWK\", \"TIU\", \"TKP\", \"UMUM\").',
+    ),
   orderIndex: zod.number(),
   createdAt: zod.string(),
   isRead: zod.boolean().nullish(),
@@ -1268,6 +1581,11 @@ export const GetStudentDashboardResponse = zod.object({
           category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
           thumbnail: zod.string().nullish(),
           isActive: zod.boolean(),
+          maintenanceMode: zod
+            .boolean()
+            .describe(
+              "When true, package is visible but checkout is disabled.",
+            ),
           createdAt: zod.string(),
           materialCount: zod.number().nullish(),
           quizCount: zod.number().nullish(),

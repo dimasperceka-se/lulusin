@@ -11,13 +11,13 @@ router.get("/admin/stats", authenticate, requireRole("admin"), async (_req, res)
   const [{ totalPackages }] = await db.select({ totalPackages: sql<number>`count(*)` }).from(packagesTable);
   const [{ activeEnrollments }] = await db.select({ activeEnrollments: sql<number>`count(*)` }).from(enrollmentsTable).where(eq(enrollmentsTable.isActive, true));
 
-  const [{ totalRevenue }] = await db.select({ totalRevenue: sql<number>`coalesce(sum(unique_amount), 0)` }).from(ordersTable).where(eq(ordersTable.status, "PAID"));
+  const [{ totalRevenue }] = await db.select({ totalRevenue: sql<number>`coalesce(sum(amount + unique_amount), 0)` }).from(ordersTable).where(eq(ordersTable.status, "PAID"));
 
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [{ revenueThisMonth }] = await db.select({ revenueThisMonth: sql<number>`coalesce(sum(unique_amount), 0)` }).from(ordersTable).where(
+  const [{ revenueThisMonth }] = await db.select({ revenueThisMonth: sql<number>`coalesce(sum(amount + unique_amount), 0)` }).from(ordersTable).where(
     and(eq(ordersTable.status, "PAID"), gte(ordersTable.paidAt, monthStart))
   );
   const [{ newStudentsThisMonth }] = await db.select({ newStudentsThisMonth: sql<number>`count(*)` }).from(usersTable).where(
@@ -38,7 +38,7 @@ router.get("/admin/stats", authenticate, requireRole("admin"), async (_req, res)
 router.get("/admin/revenue", authenticate, requireRole("admin"), async (_req, res): Promise<void> => {
   const rows = await db.select({
     month: sql<string>`to_char(date_trunc('month', paid_at), 'YYYY-MM')`,
-    revenue: sql<number>`sum(unique_amount)`,
+    revenue: sql<number>`sum(amount + unique_amount)`,
     orders: sql<number>`count(*)`,
   }).from(ordersTable).where(eq(ordersTable.status, "PAID"))
     .groupBy(sql`date_trunc('month', paid_at)`)
@@ -110,6 +110,11 @@ router.delete("/users/:id", authenticate, requireRole("admin"), async (req, res)
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   await db.delete(usersTable).where(eq(usersTable.id, id));
   res.sendStatus(204);
+});
+
+router.get("/admin/qris-status", authenticate, requireRole("admin"), async (_req, res): Promise<void> => {
+  const configured = !!(process.env.QRIS_INTERACTIVE_API_KEY && process.env.QRIS_INTERACTIVE_MID);
+  res.json({ configured });
 });
 
 export default router;

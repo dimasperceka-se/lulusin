@@ -2,12 +2,20 @@ import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { PageLoader } from "@/components/page-loader";
 import NotFound from "@/pages/not-found";
 
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import VerifyEmail from "@/pages/verify-email";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
+import PreTest from "@/pages/pre-test";
+import PreTestResult from "@/pages/pre-test-result";
+import Packages from "@/pages/packages";
 import PackageDetail from "@/pages/package-detail";
 
 // Student
@@ -32,6 +40,7 @@ import AdminTryouts from "@/pages/admin-tryouts";
 import AdminQuizzes from "@/pages/admin-quizzes";
 import AdminUsers from "@/pages/admin-users";
 import AdminBankAccounts from "@/pages/admin-bank-accounts";
+import AdminPaymentSettings from "@/pages/admin-payment-settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,7 +55,7 @@ function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: an
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <PageLoader />;
   }
 
   if (!user) {
@@ -64,7 +73,7 @@ function GuestRoute({ component: Component, ...rest }: any) {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <PageLoader />;
   }
 
   if (user) {
@@ -81,7 +90,13 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login">{(params) => <GuestRoute component={Login} {...params} />}</Route>
       <Route path="/register">{(params) => <GuestRoute component={Register} {...params} />}</Route>
+      <Route path="/packages" component={Packages} />
       <Route path="/packages/:id" component={PackageDetail} />
+      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/pre-test" component={PreTest} />
+      <Route path="/pre-test/result" component={PreTestResult} />
       
       {/* Shared Protected */}
       <Route path="/profile">{(params) => <ProtectedRoute component={Profile} {...params} />}</Route>
@@ -107,6 +122,7 @@ function Router() {
       <Route path="/admin/quizzes">{(params) => <ProtectedRoute component={AdminQuizzes} adminOnly {...params} />}</Route>
       <Route path="/admin/users">{(params) => <ProtectedRoute component={AdminUsers} adminOnly {...params} />}</Route>
       <Route path="/admin/bank-accounts">{(params) => <ProtectedRoute component={AdminBankAccounts} adminOnly {...params} />}</Route>
+      <Route path="/admin/payment-settings">{(params) => <ProtectedRoute component={AdminPaymentSettings} adminOnly {...params} />}</Route>
       
       <Route component={NotFound} />
     </Switch>
@@ -115,16 +131,18 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster position="top-right" richColors />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster position="top-right" richColors closeButton />
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

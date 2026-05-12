@@ -47,12 +47,47 @@ export interface User {
   avatar?: string | null;
   /** @nullable */
   targetInstitution?: string | null;
+  isEmailVerified: boolean;
   createdAt: string;
 }
 
 export interface AuthResponse {
   token: string;
   user: User;
+  /**
+   * Email verification token; only present on /auth/register. Frontend uses this to send the verify email via EmailJS.
+   * @nullable
+   */
+  verificationToken?: string | null;
+}
+
+export interface VerifyEmailInput {
+  token: string;
+}
+
+export interface ResendVerificationInput {
+  email: string;
+}
+
+export interface ResendVerificationResult {
+  verificationToken: string;
+  email: string;
+  name: string;
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ForgotPasswordResult {
+  resetToken: string;
+  email: string;
+  name: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  newPassword: string;
 }
 
 export interface ProfileUpdate {
@@ -100,6 +135,8 @@ export interface Package {
   /** @nullable */
   thumbnail?: string | null;
   isActive: boolean;
+  /** When true, package is visible but checkout is disabled. */
+  maintenanceMode: boolean;
   createdAt: string;
   /** @nullable */
   materialCount?: number | null;
@@ -117,6 +154,16 @@ export interface Material {
   description?: string | null;
   /** @nullable */
   fileUrl?: string | null;
+  /**
+   * Inline markdown content (rendered client-side). When set, FE renders this instead of fileUrl.
+   * @nullable
+   */
+  content?: string | null;
+  /**
+   * Category for grouping in UI (e.g. "TWK", "TIU", "TKP", "UMUM").
+   * @nullable
+   */
+  category?: string | null;
   orderIndex: number;
   createdAt: string;
   /** @nullable */
@@ -170,6 +217,7 @@ export interface PackageDetail {
   /** @nullable */
   thumbnail?: string | null;
   isActive: boolean;
+  maintenanceMode: boolean;
   createdAt: string;
   materials: Material[];
   quizzes: Quiz[];
@@ -240,6 +288,14 @@ export const OrderStatus = {
   REJECTED: "REJECTED",
 } as const;
 
+export type OrderPaymentMethod =
+  (typeof OrderPaymentMethod)[keyof typeof OrderPaymentMethod];
+
+export const OrderPaymentMethod = {
+  BANK_TRANSFER: "BANK_TRANSFER",
+  QRIS: "QRIS",
+} as const;
+
 export interface Order {
   id: number;
   userId: number;
@@ -248,6 +304,7 @@ export interface Order {
   amount: number;
   uniqueAmount: number;
   status: OrderStatus;
+  paymentMethod: OrderPaymentMethod;
   /** @nullable */
   paymentProof?: string | null;
   expiredAt: string;
@@ -256,12 +313,44 @@ export interface Order {
   /** @nullable */
   rejectionReason?: string | null;
   createdAt: string;
+  /**
+   * Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.
+   * @nullable
+   */
+  qrisContent?: string | null;
+  /** @nullable */
+  qrisInvoiceId?: string | null;
+  /** @nullable */
+  qrisNmid?: string | null;
+  /** @nullable */
+  qrisGeneratedAt?: string | null;
   package?: Package;
   bankAccounts?: BankAccount[];
 }
 
+export type OrderInputPaymentMethod =
+  (typeof OrderInputPaymentMethod)[keyof typeof OrderInputPaymentMethod];
+
+export const OrderInputPaymentMethod = {
+  BANK_TRANSFER: "BANK_TRANSFER",
+  QRIS: "QRIS",
+} as const;
+
 export interface OrderInput {
   packageId: number;
+  paymentMethod?: OrderInputPaymentMethod;
+}
+
+export type OrderMethodInputPaymentMethod =
+  (typeof OrderMethodInputPaymentMethod)[keyof typeof OrderMethodInputPaymentMethod];
+
+export const OrderMethodInputPaymentMethod = {
+  BANK_TRANSFER: "BANK_TRANSFER",
+  QRIS: "QRIS",
+} as const;
+
+export interface OrderMethodInput {
+  paymentMethod: OrderMethodInputPaymentMethod;
 }
 
 export interface OrderList {
@@ -680,6 +769,59 @@ export interface RankingEntry {
   isCurrentUser?: boolean;
 }
 
+export interface PreTestQuestion {
+  id: number;
+  questionText: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  optionE: string;
+  category: string;
+}
+
+export type PreTestSubmitInputAnswersItemAnswer =
+  (typeof PreTestSubmitInputAnswersItemAnswer)[keyof typeof PreTestSubmitInputAnswersItemAnswer];
+
+export const PreTestSubmitInputAnswersItemAnswer = {
+  A: "A",
+  B: "B",
+  C: "C",
+  D: "D",
+  E: "E",
+} as const;
+
+export type PreTestSubmitInputAnswersItem = {
+  questionId: number;
+  answer: PreTestSubmitInputAnswersItemAnswer;
+};
+
+export interface PreTestSubmitInput {
+  answers: PreTestSubmitInputAnswersItem[];
+}
+
+export interface PreTestBreakdown {
+  correct: number;
+  total: number;
+}
+
+export type PreTestResultBreakdown = {
+  TWK: PreTestBreakdown;
+  TIU: PreTestBreakdown;
+  TKP: PreTestBreakdown;
+};
+
+export interface PreTestResult {
+  totalCorrect: number;
+  totalQuestions: number;
+  breakdown: PreTestResultBreakdown;
+  monthsWithoutCourse: number;
+  monthsWithCourse: number;
+  probabilityWithoutCourse: number;
+  probabilityWithCourse: number;
+  recommendation: string;
+}
+
 export type ListUsersParams = {
   role?: string;
   search?: string;
@@ -697,6 +839,10 @@ export type ListOrdersParams = {
   status?: string;
   page?: number;
   limit?: number;
+};
+
+export type GetQrisStatus200 = {
+  configured: boolean;
 };
 
 export type ListQuestionsParams = {

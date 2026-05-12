@@ -11,6 +11,7 @@ export const packagesTable = pgTable("packages", {
   category: text("category", { enum: ["CPNS", "SD", "SMP", "SMA"] }).notNull(),
   thumbnail: text("thumbnail"),
   isActive: boolean("is_active").notNull().default(true),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

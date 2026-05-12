@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BankAccount } from "./bankAccount";
+import type { OrderPaymentMethod } from "./orderPaymentMethod";
 import type { OrderStatus } from "./orderStatus";
 import type { Package } from "./package";
 
@@ -17,6 +18,7 @@ export interface Order {
   amount: number;
   uniqueAmount: number;
   status: OrderStatus;
+  paymentMethod: OrderPaymentMethod;
   /** @nullable */
   paymentProof?: string | null;
   expiredAt: string;
@@ -25,6 +27,17 @@ export interface Order {
   /** @nullable */
   rejectionReason?: string | null;
   createdAt: string;
+  /**
+   * Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.
+   * @nullable
+   */
+  qrisContent?: string | null;
+  /** @nullable */
+  qrisInvoiceId?: string | null;
+  /** @nullable */
+  qrisNmid?: string | null;
+  /** @nullable */
+  qrisGeneratedAt?: string | null;
   package?: Package;
   bankAccounts?: BankAccount[];
 }

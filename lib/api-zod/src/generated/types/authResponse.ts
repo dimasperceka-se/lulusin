@@ -10,4 +10,9 @@ import type { User } from "./user";
 export interface AuthResponse {
   token: string;
   user: User;
+  /**
+   * Email verification token; only present on /auth/register. Frontend uses this to send the verify email via EmailJS.
+   * @nullable
+   */
+  verificationToken?: string | null;
 }

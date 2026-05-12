@@ -4,17 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "hello": "tsx ./src/hello.ts",
-    "seed": "tsx ./src/seed.ts",
+    "hello": "tsx --env-file=../artifacts/api-server/.env ./src/hello.ts",
+    "seed": "tsx --env-file=../artifacts/api-server/.env ./src/seed.ts",
+    "import-belajarbro": "tsx --env-file=../artifacts/api-server/.env ./src/import-belajarbro.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
-    "bcryptjs": "catalog:",
-    "drizzle-orm": "catalog:"
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "catalog:",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/bcryptjs": "catalog:",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   }
