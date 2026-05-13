@@ -43,7 +43,14 @@ export default function OrderDetail() {
   const [method, setMethod] = useState<PaymentMethod>("BANK_TRANSFER");
 
   const { data: order, isLoading, refetch } = useGetOrder(orderId, {
-    query: { enabled: !!orderId },
+    query: {
+      enabled: !!orderId,
+      refetchInterval: (query) => {
+        const data = query.state.data;
+        const shouldPoll = data?.status === "PENDING" && data?.paymentMethod === "QRIS";
+        return shouldPoll ? 3000 : false;
+      },
+    },
   });
 
   const uploadMutation = useUploadPaymentProof();

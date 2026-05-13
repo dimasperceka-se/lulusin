@@ -65,6 +65,69 @@ async function enrichOrder(order: typeof ordersTable.$inferSelect) {
   return { ...order, package: pkg, bankAccounts };
 }
 
+type QrisStatusResult = {
+  status: "paid" | "unpaid" | "expired" | "unknown";
+  paidAt?: Date | null;
+  payerName?: string | null;
+  paymentMethod?: string | null;
+};
+
+// Response format guessed from QRIS Interactive create-invoice pattern.
+// Adjust field names after first real check-status call is logged.
+async function checkQrisStatus(qrisInvoiceId: string): Promise<QrisStatusResult> {
+  const apiKey = process.env.QRIS_INTERACTIVE_API_KEY;
+  const mID = process.env.QRIS_INTERACTIVE_MID;
+  if (!apiKey || !mID) throw new Error("QRIS provider not configured");
+
+  const params = new URLSearchParams({
+    do: "checkpaid-qris",
+    apikey: apiKey,
+    mID: mID,
+    invid: qrisInvoiceId,
+  });
+  const resp = await fetch(`${QRIS_API_URL}?${params.toString()}`, { method: "GET" });
+  if (!resp.ok) throw new Error(`QRIS check-status HTTP ${resp.status}`);
+  const json = await resp.json() as { status?: string; data?: Record<string, string> };
+
+  const data = json.data ?? {};
+  const rawStatus = String(data.qris_status ?? data.status ?? "").toLowerCase();
+  let status: QrisStatusResult["status"] = "unknown";
+  if (["paid", "success", "settlement", "settled", "lunas"].includes(rawStatus)) status = "paid";
+  else if (["unpaid", "pending"].includes(rawStatus)) status = "unpaid";
+  else if (["expired", "cancelled", "canceled", "failed"].includes(rawStatus)) status = "expired";
+
+  return {
+    status,
+    paidAt: data.qris_paid_at ? new Date(data.qris_paid_at) : null,
+    payerName: data.qris_payer_name ?? data.qris_payment_customer_name ?? null,
+    paymentMethod: data.qris_payment_method ?? null,
+  };
+}
+
+export async function markOrderPaid(orderId: number, paidAt?: Date): Promise<void> {
+  const [current] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+  if (!current || current.status === "PAID") return;
+
+  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, current.packageId));
+  const expiredAt = new Date();
+  expiredAt.setDate(expiredAt.getDate() + (pkg?.durationDays ?? 30));
+
+  await db.update(ordersTable).set({
+    status: "PAID",
+    paidAt: paidAt ?? new Date(),
+  }).where(eq(ordersTable.id, orderId));
+
+  await db.insert(enrollmentsTable).values({
+    userId: current.userId,
+    packageId: current.packageId,
+    startedAt: new Date(),
+    expiredAt,
+    isActive: true,
+  }).onConflictDoNothing();
+
+  logger.info({ orderId, userId: current.userId }, "Order auto-marked PAID, enrollment created");
+}
+
 router.get("/orders", authenticate, async (req, res): Promise<void> => {
   const params = ListOrdersQueryParams.safeParse(req.query);
   const query = params.success ? params.data : {};
@@ -147,7 +210,7 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
 router.get("/orders/:id", authenticate, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+  let [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -157,6 +220,18 @@ router.get("/orders/:id", authenticate, async (req, res): Promise<void> => {
   if (!isAdmin && order.userId !== req.user!.userId) {
     res.status(403).json({ error: "Forbidden" });
     return;
+  }
+
+  if (order.status === "PENDING" && order.paymentMethod === "QRIS" && order.qrisInvoiceId) {
+    try {
+      const result = await checkQrisStatus(order.qrisInvoiceId);
+      if (result.status === "paid") {
+        await markOrderPaid(order.id, result.paidAt ?? undefined);
+        [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+      }
+    } catch (e) {
+      logger.warn({ err: e, orderId: id }, "QRIS check-status failed (non-fatal)");
+    }
   }
 
   res.json(await enrichOrder(order));

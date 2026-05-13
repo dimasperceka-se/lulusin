@@ -13,6 +13,7 @@ import attemptsRouter from "./attempts";
 import adminRouter from "./admin";
 import studentRouter from "./student";
 import preTestRouter from "./pre-test";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(attemptsRouter);
 router.use(adminRouter);
 router.use(studentRouter);
 router.use(preTestRouter);
+router.use(webhooksRouter);
 
 export default router;
