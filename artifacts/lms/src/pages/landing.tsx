@@ -560,7 +560,15 @@ export default function Landing() {
           </div>
         </div>
         <div className="container mx-auto max-w-6xl mt-12 pt-8 border-t border-border text-center text-muted-foreground text-sm">
-          &copy; {new Date().getFullYear()} Lulusin. All rights reserved.
+          &copy; {new Date().getFullYear()} Lulusin. All rights reserved. &middot; Powered by{" "}
+          <a
+            href="https://hemitech.id/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Hemitech ID
+          </a>
         </div>
       </footer>
       </div>
