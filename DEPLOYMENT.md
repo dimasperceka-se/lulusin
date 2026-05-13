@@ -1,6 +1,6 @@
 # Lulusin — Deployment & Operations Guide
 
-End-to-end guide for working on the Lulusin LMS: local development, pushing to GitHub, pulling on the Tencent Cloud server, and deploying to **lulusin.storify.id**.
+End-to-end guide for working on the Lulusin LMS: local development, pushing to GitHub, pulling on the Tencent Cloud server, and deploying to **lulusin.hemitech.id**.
 
 > Stack: pnpm workspaces · Node.js 24 · TypeScript 5.9 · React 19 + Vite · Express 5 · PostgreSQL + Drizzle ORM · PM2 + Nginx
 
@@ -12,7 +12,7 @@ End-to-end guide for working on the Lulusin LMS: local development, pushing to G
 2. [Running locally](#1-running-locally)
 3. [Pushing changes to the GitHub repo](#2-pushing-changes-to-the-github-repo)
 4. [Pulling latest on the Tencent Cloud server](#3-pulling-latest-on-the-tencent-cloud-server)
-5. [Deploying to lulusin.storify.id](#4-deploying-to-lulusinstorifyid)
+5. [Deploying to lulusin.hemitech.id](#4-deploying-to-lulusinhemitechid)
 6. [Troubleshooting](#5-troubleshooting)
 
 ---
@@ -289,7 +289,7 @@ pm2 restart lulusin-api
 
 ---
 
-## 4. Deploying to lulusin.storify.id
+## 4. Deploying to lulusin.hemitech.id
 
 This section covers the **first-time setup** for the Tencent Cloud server. For subsequent deploys, use [Section 3](#3-pulling-latest-on-the-tencent-cloud-server).
 
@@ -406,15 +406,15 @@ pm2 startup systemd -u <SSH_USER> --hp /home/<SSH_USER>
 
 Verify: `pm2 status` should show `lulusin-api` as `online`.
 
-### 4.7 Nginx for lulusin.storify.id
+### 4.7 Nginx for lulusin.hemitech.id
 
-Create `/etc/nginx/sites-available/lulusin.storify.id`:
+Create `/etc/nginx/sites-available/lulusin.hemitech.id`:
 
 ```nginx
 server {
     listen 80;
     listen [::]:80;
-    server_name lulusin.storify.id;
+    server_name lulusin.hemitech.id;
 
     # Frontend (Vite build output)
     root /var/www/lulusin/artifacts/lms/dist/public;
@@ -451,7 +451,7 @@ server {
 Enable + reload:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/lulusin.storify.id /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/lulusin.hemitech.id /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -461,15 +461,15 @@ sudo systemctl reload nginx
 In your DNS provider, create an **A record**:
 
 ```
-lulusin.storify.id    A    <SERVER_IP>    TTL 300
+lulusin.hemitech.id    A    <SERVER_IP>    TTL 300
 ```
 
-Wait for propagation (`dig lulusin.storify.id +short` should return `<SERVER_IP>`).
+Wait for propagation (`dig lulusin.hemitech.id +short` should return `<SERVER_IP>`).
 
 ### 4.9 HTTPS via Let's Encrypt
 
 ```bash
-sudo certbot --nginx -d lulusin.storify.id --redirect --agree-tos -m admin@storify.id
+sudo certbot --nginx -d lulusin.hemitech.id --redirect --agree-tos -m admin@hemitech.id
 ```
 
 Certbot updates the Nginx config to listen on `443` with auto-redirect from `80`, and installs a cron-based renewal. Test renewal:
@@ -481,11 +481,11 @@ sudo certbot renew --dry-run
 ### 4.10 Smoke test
 
 ```bash
-curl -I https://lulusin.storify.id/                 # 200 OK, returns index.html
-curl    https://lulusin.storify.id/api/health       # whatever your health endpoint returns
+curl -I https://lulusin.hemitech.id/                 # 200 OK, returns index.html
+curl    https://lulusin.hemitech.id/api/health       # whatever your health endpoint returns
 ```
 
-Open [https://lulusin.storify.id](https://lulusin.storify.id) and log in with the demo admin account (`admin@lulusin.id` / `admin123`) to verify end-to-end.
+Open [https://lulusin.hemitech.id](https://lulusin.hemitech.id) and log in with the demo admin account (`admin@lulusin.id` / `admin123`) to verify end-to-end.
 
 ---
 
