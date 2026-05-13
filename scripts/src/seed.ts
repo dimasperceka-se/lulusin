@@ -28,7 +28,7 @@ type SeedQuestion = {
   optionC: string;
   optionD: string;
   optionE: string;
-  correctAnswer: string;
+  correctAnswer: "A" | "B" | "C" | "D" | "E";
   explanation: string;
   category: QuestionCategory;
   difficulty: "easy" | "medium" | "hard";
@@ -57,7 +57,7 @@ function loadCpnsQuestions(): SeedQuestion[] {
         optionC: String(optC ?? "").trim(),
         optionD: String(optD ?? "").trim(),
         optionE: String(optE ?? "").trim(),
-        correctAnswer: String(jawaban).trim().toUpperCase().charAt(0),
+        correctAnswer: String(jawaban).trim().toUpperCase().charAt(0) as "A" | "B" | "C" | "D" | "E",
         explanation: keterangan ? String(keterangan).trim() : "",
         category,
         difficulty: "medium",

@@ -25,7 +25,10 @@ router.post("/tryouts", authenticate, requireRole("admin", "tutor"), async (req,
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [tryout] = await db.insert(tryoutsTable).values(parsed.data).returning();
+  const [tryout] = await db.insert(tryoutsTable).values({
+    ...parsed.data,
+    scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null,
+  }).returning();
   res.status(201).json(tryout);
 });
 
@@ -55,7 +58,12 @@ router.patch("/tryouts/:id", authenticate, requireRole("admin", "tutor"), async 
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [tryout] = await db.update(tryoutsTable).set(parsed.data).where(eq(tryoutsTable.id, id)).returning();
+  const { type, scheduledAt, ...rest } = parsed.data;
+  const [tryout] = await db.update(tryoutsTable).set({
+    ...rest,
+    ...(type !== undefined && { type: type as "CPNS_SKD" | "UTBK" | "CUSTOM" }),
+    ...(scheduledAt !== undefined && { scheduledAt: scheduledAt ? new Date(scheduledAt) : null }),
+  }).where(eq(tryoutsTable.id, id)).returning();
   if (!tryout) {
     res.status(404).json({ error: "Tryout not found" });
     return;

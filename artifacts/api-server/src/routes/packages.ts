@@ -66,7 +66,11 @@ router.patch("/packages/:id", authenticate, requireRole("admin"), async (req, re
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [pkg] = await db.update(packagesTable).set(parsed.data).where(eq(packagesTable.id, id)).returning();
+  const { category, ...rest } = parsed.data;
+  const [pkg] = await db.update(packagesTable).set({
+    ...rest,
+    ...(category !== undefined && { category: category as "CPNS" | "SD" | "SMP" | "SMA" }),
+  }).where(eq(packagesTable.id, id)).returning();
   if (!pkg) {
     res.status(404).json({ error: "Package not found" });
     return;
