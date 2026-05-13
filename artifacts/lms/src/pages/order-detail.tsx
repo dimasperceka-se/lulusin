@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { formatRupiah, fileToBase64 } from "@/lib/utils";
+import { formatRupiah, fileToBase64, calculateTax, TAX_RATE } from "@/lib/utils";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Copy, UploadCloud, AlertCircle, Building2, User, QrCode, CheckCircle2 } from "lucide-react";
@@ -138,7 +138,8 @@ export default function OrderDetail() {
   }
 
   const isPending = order.status === "PENDING" || order.status === "REJECTED";
-  const totalAmount = order.amount + order.uniqueAmount;
+  const taxAmount = calculateTax(order.amount);
+  const totalAmount = order.amount + taxAmount + order.uniqueAmount;
   const hasBank = (order.bankAccounts?.length ?? 0) > 0;
   const qrisContent = order.qrisContent;
   const qrisNmid = order.qrisNmid;
@@ -190,6 +191,10 @@ export default function OrderDetail() {
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Harga Paket</span>
                   <span>{formatRupiah(order.amount)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Pajak {Math.round(TAX_RATE * 100)}% (PPN)</span>
+                  <span>+{formatRupiah(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Kode Unik</span>
