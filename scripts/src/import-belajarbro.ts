@@ -17,6 +17,10 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const CRAWLING_DIR = path.join(REPO_ROOT, "attached_assets/crawling_result");
 const MATERI_DIR = path.join(CRAWLING_DIR, "materi_belajarbro");
 
+function stripBelajarbro(text: string): string {
+  return text.replace(/\bbelajarbro(?:\.id)?\b/gi, "").replace(/\s{2,}/g, " ").trim();
+}
+
 type Category = "TWK" | "TIU" | "TKP";
 
 type ImportedQuestion = {
@@ -63,14 +67,14 @@ function loadExcelBySubcategory(
       if (!optA || !optB || !optC || !optD || !optE) continue;
 
       questions.push({
-        questionText: String(soal).trim(),
-        optionA: optA,
-        optionB: optB,
-        optionC: optC,
-        optionD: optD,
-        optionE: optE,
+        questionText: stripBelajarbro(String(soal).trim()),
+        optionA: stripBelajarbro(optA),
+        optionB: stripBelajarbro(optB),
+        optionC: stripBelajarbro(optC),
+        optionD: stripBelajarbro(optD),
+        optionE: stripBelajarbro(optE),
         correctAnswer: correct as ImportedQuestion["correctAnswer"],
-        explanation: pembahasan ? String(pembahasan).trim() : null,
+        explanation: pembahasan ? stripBelajarbro(String(pembahasan).trim()) : null,
         category,
         tags: `belajarbro:${sheetName}`,
         difficulty: "medium",
@@ -126,12 +130,19 @@ async function readMateri(): Promise<
       const full = path.join(dir, file);
       let raw = await readFile(full, "utf-8");
 
-      // Strip crawler metadata footer block (>Kategori/Sumber/Diambil + horizontal rule).
-      // Handle both LF and CRLF line endings.
+      // Strip crawler metadata header (>Kategori/Sumber/Diambil + horizontal rule).
       raw = raw.replace(
         /> \*\*Kategori\*\*:[^\n]*\r?\n> \*\*Sumber\*\*:[^\n]*\r?\n> \*\*Diambil\*\*:[^\n]*\r?\n\r?\n---\r?\n\r?\n/g,
         "",
       );
+      // Strip image refs that point to belajarbro.id (forum avatars, etc).
+      raw = raw.replace(/!\[[^\]]*\]\(https?:\/\/belajarbro\.id[^)]*\)\r?\n?/gi, "");
+      // Catch-all: any remaining line that mentions "belajarbro" (attribution footer,
+      // inline references, source URLs left over). The original belajarbro source attribution
+      // is preserved in attached_assets/, this just removes it from rendered content.
+      raw = raw.replace(/^[^\n]*belajarbro[^\n]*\r?\n?/gim, "");
+      // Collapse 3+ consecutive blank lines into 2 and trim trailing whitespace.
+      raw = raw.replace(/(\r?\n){3,}/g, "\n\n").trim() + "\n";
 
       const prefixMatch = file.match(/^(\d+)-(.+)\.md$/);
       const prefix = prefixMatch ? Number(prefixMatch[1]) : 0;
