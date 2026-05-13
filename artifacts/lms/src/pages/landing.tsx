@@ -25,7 +25,10 @@ import {
 } from "lucide-react";
 import heroPhoto from "@assets/foto_bertiga-removebg-preview.png";
 import logoUrl from "@assets/logo.png";
+import pnsAlumni from "@assets/pns_1.png";
 import { RobotMascot } from "@/components/robot-mascot";
+import { FlowingRibbons } from "@/components/background-decorations";
+import { motion } from "framer-motion";
 
 export default function Landing() {
   const [category, setCategory] = useState<string>("");
@@ -53,7 +56,11 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background">
+      {/* Page-wide flowing ribbons background */}
+      <FlowingRibbons />
+
+      <div className="relative z-10">
       <Navbar />
 
       {/* Hero */}
@@ -163,91 +170,214 @@ export default function Landing() {
       {/* Pre-Test Mascot CTA */}
       <RobotMascot />
 
-      {/* Features - Bento Grid */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-3xl md:text-4xl font-bold mb-3">Kenapa pilih Lulusin?</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Semua yang kamu butuhkan untuk lulus, dalam satu platform.
+      {/* Features - redesigned */}
+      <section className="relative py-20 px-4 overflow-hidden">
+        {/* Decorative background blobs */}
+        <div className="absolute top-20 -left-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-20 -right-32 w-96 h-96 rounded-full bg-accent/5 blur-3xl pointer-events-none" />
+
+        <div className="relative container mx-auto max-w-6xl">
+          <div className="text-center mb-14">
+            <Badge variant="secondary" className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Kenapa Lulusin</span>
+            </Badge>
+            <h2 className="font-display text-3xl md:text-5xl font-extrabold tracking-tight mb-3">
+              Disiapkan bareng yang <span className="text-gradient">udah berhasil</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-base md:text-lg">
+              Ribuan alumni Lulusin sudah lolos SKD dan bekerja sebagai ASN. Berikut alat lengkap yang membantu mereka.
             </p>
           </div>
 
+          {/* Hero strip: PNS alumni photo + stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6 }}
+            className="relative grid md:grid-cols-[1fr_1.3fr] gap-6 md:gap-10 items-center mb-6 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-background border border-primary/20 p-6 md:p-10 overflow-hidden"
+          >
+            <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
+
+            {/* PNS image */}
+            <div className="relative flex justify-center md:justify-start order-2 md:order-1">
+              <motion.div
+                className="relative"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <img
+                  src={pnsAlumni}
+                  alt="Alumni PNS Lulusin"
+                  className="relative h-64 md:h-80 lg:h-96 w-auto object-contain drop-shadow-2xl select-none"
+                  draggable={false}
+                />
+                {/* Floating badges around */}
+                <motion.div
+                  className="absolute top-8 -right-2 md:-right-6 bg-white shadow-lift rounded-2xl px-3 py-2 flex items-center gap-2 border border-card-border"
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <div className="h-8 w-8 rounded-full bg-success/15 grid place-items-center text-success">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground leading-none">Status</p>
+                    <p className="text-xs font-bold leading-tight">Lulus CPNS</p>
+                  </div>
+                </motion.div>
+                <motion.div
+                  className="absolute bottom-12 -left-2 md:-left-6 bg-white shadow-lift rounded-2xl px-3 py-2 flex items-center gap-2 border border-card-border"
+                  animate={{ y: [0, 6, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/15 grid place-items-center text-primary">
+                    <Trophy className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground leading-none">Skor SKD</p>
+                    <p className="text-xs font-bold leading-tight">345 / 500</p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* Right: content */}
+            <div className="order-1 md:order-2">
+              <Badge variant="secondary" className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-success/10 border border-success/20 text-success">
+                <Star className="h-3 w-3" />
+                <span className="text-xs font-medium">Cerita Sukses</span>
+              </Badge>
+              <h3 className="font-display text-2xl md:text-3xl font-bold mb-3 leading-tight">
+                "3 bulan latihan di Lulusin, akhirnya lolos seleksi"
+              </h3>
+              <p className="text-muted-foreground mb-5 leading-relaxed">
+                Cara kerja Lulusin terbukti — kombinasi bank soal real, tryout terjadwal, dan analisis kelemahan
+                membantu calon ASN seperti Aisyah mempercepat persiapan.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: "1.000+", label: "Alumni" },
+                  { value: "87%", label: "Tingkat Lolos" },
+                  { value: "2.658", label: "Bank Soal" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl bg-white/70 dark:bg-card border border-card-border px-3 py-3 text-center">
+                    <p className="font-display text-xl md:text-2xl font-extrabold text-primary leading-none">
+                      {s.value}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Bento grid: 5 features with varied gradients */}
           <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4 md:auto-rows-fr">
-            {/* Big card */}
-            <div className="md:col-span-2 md:row-span-2 group relative overflow-hidden rounded-2xl border border-card-border bg-card p-8 shadow-soft hover-lift">
-              <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+            {/* Big card — Sistem CBT */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="md:col-span-2 md:row-span-2 group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-accent/5 p-8 shadow-soft hover-lift"
+            >
+              <div className="absolute -top-12 -right-12 h-56 w-56 rounded-full bg-primary/15 blur-3xl group-hover:bg-primary/25 transition-colors" />
+              <div className="absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
               <div className="relative">
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary text-primary-foreground shadow-glow mb-5">
-                  <CheckCircle2 className="h-6 w-6" />
+                <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-glow mb-5">
+                  <CheckCircle2 className="h-7 w-7" />
                 </div>
                 <h3 className="font-display text-2xl md:text-3xl font-bold mb-3">Sistem CBT Realistis</h3>
                 <p className="text-muted-foreground max-w-md mb-6">
                   Antarmuka tryout yang persis dengan ujian aslinya — timer, navigasi soal, flagging,
                   dan auto-submit. Latih mental sebelum hari-H.
                 </p>
-                <div className="rounded-xl border border-card-border bg-background p-4 shadow-soft">
+                <div className="rounded-xl border border-card-border bg-white dark:bg-card p-4 shadow-soft backdrop-blur-sm">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-medium text-muted-foreground">Tryout SKD CPNS</span>
                     <Badge variant="secondary" className="bg-success/10 text-success border-0">PASS</Badge>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">TWK</span>
-                      <span className="font-semibold">75 / 75</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">TIU</span>
-                      <span className="font-semibold">95 / 100</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">TKP</span>
-                      <span className="font-semibold">175 / 175</span>
-                    </div>
+                    {[
+                      { label: "TWK", score: "75 / 75", color: "bg-primary" },
+                      { label: "TIU", score: "95 / 100", color: "bg-accent" },
+                      { label: "TKP", score: "175 / 175", color: "bg-success" },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center gap-3 text-sm">
+                        <span className={`h-2 w-2 rounded-full ${row.color}`} />
+                        <span className="text-muted-foreground flex-1">{row.label}</span>
+                        <span className="font-semibold tabular-nums">{row.score}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="group relative overflow-hidden rounded-2xl border border-card-border bg-card p-6 shadow-soft hover-lift">
-              <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-accent/10 text-accent mb-4">
-                <FileText className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg font-bold mb-2">Materi Komprehensif</h3>
-              <p className="text-sm text-muted-foreground">
-                Modul terstruktur sesuai kisi-kisi terbaru.
-              </p>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-2xl border border-card-border bg-card p-6 shadow-soft hover-lift">
-              <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-success/10 text-success mb-4">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg font-bold mb-2">Analisis Mendalam</h3>
-              <p className="text-sm text-muted-foreground">
-                Laporan hasil & ranking peserta.
-              </p>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-2xl border border-card-border bg-card p-6 shadow-soft hover-lift">
-              <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary mb-4">
-                <Zap className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg font-bold mb-2">Belajar Cepat</h3>
-              <p className="text-sm text-muted-foreground">
-                Akses 24/7, di mana saja.
-              </p>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-2xl border border-card-border bg-card p-6 shadow-soft hover-lift">
-              <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-accent/10 text-accent mb-4">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg font-bold mb-2">Tutor Berpengalaman</h3>
-              <p className="text-sm text-muted-foreground">
-                Bimbingan dari pengajar tersertifikasi.
-              </p>
-            </div>
+            {[
+              {
+                icon: FileText,
+                title: "Materi Komprehensif",
+                desc: "Modul terstruktur sesuai kisi-kisi terbaru.",
+                gradient: "from-accent/15 via-accent/5 to-background",
+                iconBg: "from-accent to-accent/70",
+                iconColor: "text-white",
+                glow: "bg-accent/20",
+                delay: 0.1,
+              },
+              {
+                icon: BarChart3,
+                title: "Analisis Mendalam",
+                desc: "Laporan hasil & ranking peserta.",
+                gradient: "from-success/15 via-success/5 to-background",
+                iconBg: "from-success to-success/70",
+                iconColor: "text-white",
+                glow: "bg-success/20",
+                delay: 0.15,
+              },
+              {
+                icon: Zap,
+                title: "Belajar Cepat",
+                desc: "Akses 24/7, di mana saja.",
+                gradient: "from-yellow-200/40 via-amber-100/30 to-background",
+                iconBg: "from-amber-500 to-yellow-500",
+                iconColor: "text-white",
+                glow: "bg-amber-300/30",
+                delay: 0.2,
+              },
+              {
+                icon: ShieldCheck,
+                title: "Tutor Berpengalaman",
+                desc: "Bimbingan dari pengajar tersertifikasi.",
+                gradient: "from-primary/10 via-primary/5 to-background",
+                iconBg: "from-primary to-accent",
+                iconColor: "text-white",
+                glow: "bg-primary/20",
+                delay: 0.25,
+              },
+            ].map(({ icon: Icon, title, desc, gradient, iconBg, iconColor, glow, delay }) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay }}
+                whileHover={{ y: -4 }}
+                className={`group relative overflow-hidden rounded-2xl border border-card-border bg-gradient-to-br ${gradient} p-6 shadow-soft transition-shadow hover:shadow-lift`}
+              >
+                <div className={`absolute -top-8 -right-8 h-32 w-32 rounded-full ${glow} blur-2xl pointer-events-none group-hover:opacity-80 transition-opacity`} />
+                <div className="relative">
+                  <div className={`inline-flex items-center justify-center h-11 w-11 rounded-xl bg-gradient-to-br ${iconBg} ${iconColor} shadow-soft mb-4`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-display text-lg font-bold mb-2">{title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -433,6 +563,7 @@ export default function Landing() {
           &copy; {new Date().getFullYear()} Lulusin. All rights reserved.
         </div>
       </footer>
+      </div>
     </div>
   );
 }
