@@ -7,6 +7,7 @@
     "hello": "tsx --env-file=../artifacts/api-server/.env ./src/hello.ts",
     "seed": "tsx --env-file=../artifacts/api-server/.env ./src/seed.ts",
     "import-belajarbro": "tsx --env-file=../artifacts/api-server/.env ./src/import-belajarbro.ts",
+    "import-tiu-100": "tsx --env-file=../artifacts/api-server/.env ./src/import-tiu-100.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

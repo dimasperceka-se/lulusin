@@ -34,6 +34,35 @@ type SeedQuestion = {
   difficulty: "easy" | "medium" | "hard";
 };
 
+const VALID_ANSWERS = new Set(["A", "B", "C", "D", "E"]);
+
+function pushIfValid(
+  out: SeedQuestion[],
+  category: QuestionCategory,
+  questionText: unknown,
+  optA: unknown, optB: unknown, optC: unknown, optD: unknown, optE: unknown,
+  jawaban: unknown,
+  explanation: unknown,
+): void {
+  if (!questionText || !jawaban) return;
+  const answer = String(jawaban).trim().toUpperCase().charAt(0);
+  if (!VALID_ANSWERS.has(answer)) return;
+  const a = String(optA ?? "").trim();
+  const b = String(optB ?? "").trim();
+  const c = String(optC ?? "").trim();
+  const d = String(optD ?? "").trim();
+  const e = String(optE ?? "").trim();
+  if (!a || !b || !c || !d || !e) return;
+  out.push({
+    questionText: String(questionText).trim(),
+    optionA: a, optionB: b, optionC: c, optionD: d, optionE: e,
+    correctAnswer: answer as SeedQuestion["correctAnswer"],
+    explanation: explanation ? String(explanation).trim() : "",
+    category,
+    difficulty: "medium",
+  });
+}
+
 function loadCpnsQuestions(): SeedQuestion[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const xlsxPath = path.resolve(here, "../../attached_assets/Soal_CPNS_2024_TWK_TIU_TKP.xlsx");
@@ -44,24 +73,11 @@ function loadCpnsQuestions(): SeedQuestion[] {
     const ws = wb.Sheets[category];
     if (!ws) throw new Error(`Sheet not found: ${category}`);
     const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null });
-    // Header at row index 3, data from row index 4 onward
     for (let i = 4; i < rows.length; i++) {
       const r = rows[i];
       if (!r || r[1] == null) continue;
-      const [, questionText, optA, optB, optC, optD, optE, jawaban, keterangan] = r as (string | number | null)[];
-      if (!questionText || !jawaban) continue;
-      out.push({
-        questionText: String(questionText).trim(),
-        optionA: String(optA ?? "").trim(),
-        optionB: String(optB ?? "").trim(),
-        optionC: String(optC ?? "").trim(),
-        optionD: String(optD ?? "").trim(),
-        optionE: String(optE ?? "").trim(),
-        correctAnswer: String(jawaban).trim().toUpperCase().charAt(0) as "A" | "B" | "C" | "D" | "E",
-        explanation: keterangan ? String(keterangan).trim() : "",
-        category,
-        difficulty: "medium",
-      });
+      const [, soal, a, b, c, d, e, jawaban, keterangan] = r as (string | number | null)[];
+      pushIfValid(out, category, soal, a, b, c, d, e, jawaban, keterangan);
     }
   }
 
