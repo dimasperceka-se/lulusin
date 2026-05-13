@@ -7,6 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatRupiah } from "@/lib/utils";
 import {
   BookOpen,
@@ -376,7 +385,113 @@ export default function PackageDetail() {
                       {createOrderMutation.isPending ? "Memproses..." : "Beli Paket Sekarang"}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      Dengan membeli, kamu menyetujui Syarat & Ketentuan kami.
+                      Dengan membeli, kamu menyetujui{" "}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button
+                            type="button"
+                            className="font-medium text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                          >
+                            Syarat &amp; Ketentuan
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle>Syarat &amp; Ketentuan Pembelian</DialogTitle>
+                            <DialogDescription>
+                              Harap dibaca dengan saksama. Dengan menyelesaikan
+                              pembelian, kamu dianggap memahami dan menyetujui
+                              ketentuan berikut sepenuhnya.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <ScrollArea className="max-h-[55vh] pr-4">
+                            <ol className="list-decimal pl-5 space-y-3 text-sm text-foreground/90 leading-relaxed">
+                              <li>
+                                Seluruh pembelian paket bersifat <strong>final</strong>.
+                                Pembeli tidak berhak meminta pengembalian dana
+                                (refund) dengan alasan apa pun, termasuk namun
+                                tidak terbatas pada: berubah pikiran, salah pilih
+                                paket, tidak sempat belajar, atau hasil ujian
+                                yang tidak sesuai harapan.
+                              </li>
+                              <li>
+                                Lulusin <strong>tidak menjamin kelulusan</strong> peserta
+                                pada ujian apa pun. Pembeli memahami bahwa hasil
+                                akhir bergantung sepenuhnya pada usaha pribadi
+                                masing-masing, dan tidak berhak menuntut Lulusin
+                                atas hasil yang dicapai.
+                              </li>
+                              <li>
+                                Akses paket berlaku selama durasi yang tertera
+                                pada deskripsi paket dan akan berakhir secara
+                                otomatis tanpa pemberitahuan. Perpanjangan
+                                hanya dapat dilakukan melalui pembelian baru.
+                              </li>
+                              <li>
+                                Akun bersifat pribadi. Dilarang membagikan,
+                                meminjamkan, menyewakan, atau menjual akun
+                                kepada pihak lain. Pelanggaran berakibat
+                                <strong> penutupan akses permanen tanpa kompensasi
+                                ataupun pengembalian dana</strong>.
+                              </li>
+                              <li>
+                                Seluruh materi, video, soal, pembahasan, dan
+                                dokumen yang tersedia adalah hak cipta Lulusin.
+                                Dilarang menyalin, merekam, mendistribusikan,
+                                atau memublikasikan ulang dalam bentuk apa pun.
+                                Pelanggaran dapat dikenai tuntutan hukum.
+                              </li>
+                              <li>
+                                Lulusin berhak mengubah, menambah, mengganti,
+                                atau menghapus materi, soal, fitur, harga, dan
+                                ketentuan layanan <strong>sewaktu-waktu</strong> tanpa
+                                pemberitahuan terlebih dahulu, tanpa kewajiban
+                                kompensasi kepada pembeli.
+                              </li>
+                              <li>
+                                Layanan disediakan apa adanya (<em>as is</em>).
+                                Lulusin tidak bertanggung jawab atas gangguan
+                                teknis di luar kendali kami, termasuk gangguan
+                                jaringan internet pembeli, perangkat pembeli,
+                                penyedia pembayaran pihak ketiga, atau penyedia
+                                infrastruktur cloud.
+                              </li>
+                              <li>
+                                Pembeli bertanggung jawab atas keamanan kata
+                                sandi akunnya. Lulusin tidak bertanggung jawab
+                                atas kerugian akibat penyalahgunaan akun oleh
+                                pihak yang tidak berwenang.
+                              </li>
+                              <li>
+                                Promosi, diskon, voucher, dan bonus bersifat
+                                terbatas dan dapat dicabut sewaktu-waktu.
+                                Promosi tidak dapat digabung dengan promosi
+                                lain kecuali dinyatakan secara eksplisit.
+                              </li>
+                              <li>
+                                Dengan menyelesaikan pembelian, pembeli
+                                menyetujui pemrosesan data pribadi (nama,
+                                email, nomor telepon, dan riwayat aktivitas)
+                                untuk keperluan operasional, peningkatan
+                                layanan, dan komunikasi pemasaran dari Lulusin.
+                              </li>
+                              <li>
+                                Setiap sengketa diutamakan diselesaikan secara
+                                musyawarah. Apabila tidak tercapai, sengketa
+                                tunduk pada hukum Republik Indonesia dengan
+                                tempat penyelesaian di domisili Lulusin.
+                              </li>
+                              <li>
+                                Ketentuan ini dapat diperbarui sewaktu-waktu.
+                                Versi terbaru yang ditampilkan pada saat
+                                pembelian merupakan versi yang berlaku dan
+                                mengikat pembeli.
+                              </li>
+                            </ol>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>{" "}
+                      kami.
                     </p>
                   </>
                 )}
