@@ -8,6 +8,9 @@ UPDATE packages SET thumbnail = '/covers/sampul_utbk_sma.png'     WHERE name = '
 UPDATE packages SET thumbnail = '/covers/sampul_utbk_smp.png'     WHERE name = 'Bimbel Matematika SMP';
 UPDATE packages SET thumbnail = '/covers/sampul_calistung_sd.png' WHERE name = 'Calistung dan Matematika SD';
 
+-- 1b. Pricing
+UPDATE packages SET price = 141000 WHERE name = 'Paket CPNS Lengkap 2026';
+
 -- 2. Maintenance mode for non-CPNS + Paket TWK Intensif (still under construction)
 UPDATE packages SET maintenance_mode = true WHERE category != 'CPNS';
 UPDATE packages SET maintenance_mode = true WHERE name = 'Paket TWK Intensif CPNS';
