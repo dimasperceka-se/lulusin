@@ -9,11 +9,6 @@ const router = Router();
 
 const QRIS_API_URL = "https://qris.interactive.co.id/restapi/qris/show_qris.php";
 
-const TAX_RATE = 0.11;
-function calculateTax(baseAmount: number): number {
-  return Math.round(baseAmount * TAX_RATE);
-}
-
 function generateOrderCode(): string {
   const now = new Date();
   const date = now.toISOString().slice(0, 10).replace(/-/g, "");
@@ -189,7 +184,7 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
   let qrisFields: Partial<QrisGenerated> = {};
   if (paymentMethod === "QRIS") {
     try {
-      qrisFields = await generateQris(orderCode, pkg.price + calculateTax(pkg.price) + uniqueAmount);
+      qrisFields = await generateQris(orderCode, pkg.price + uniqueAmount);
     } catch (e) {
       logger.error({ err: e }, "Failed to generate QRIS at order creation");
       res.status(503).json({ error: "QRIS provider unavailable. Pilih Transfer Bank atau coba lagi." });
@@ -266,7 +261,7 @@ router.patch("/orders/:id/method", authenticate, requireRole("student"), async (
     const stale = !order.qrisContent || !order.qrisGeneratedAt || (Date.now() - new Date(order.qrisGeneratedAt).getTime() > QR_TTL_MS);
     if (stale) {
       try {
-        qrisFields = await generateQris(order.orderCode, order.amount + calculateTax(order.amount) + order.uniqueAmount);
+        qrisFields = await generateQris(order.orderCode, order.amount + order.uniqueAmount);
       } catch (e) {
         logger.error({ err: e, orderId: id }, "Failed to generate QRIS on method switch");
         res.status(503).json({ error: "QRIS provider unavailable. Pilih Transfer Bank atau coba lagi." });

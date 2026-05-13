@@ -94,7 +94,7 @@ async function seed() {
   console.log("Bank accounts seeded");
 
   await db.insert(packagesTable).values([
-    { name: "Paket CPNS Lengkap 2026", description: "Persiapan CPNS terlengkap mencakup TWK, TIU, dan TKP dengan ratusan soal dan tryout simulasi SKD. Dipandu tutor berpengalaman CPNS.", price: 141000, durationDays: 90, category: "CPNS", isActive: true },
+    { name: "Paket CPNS Lengkap 2026", description: "Persiapan CPNS terlengkap mencakup TWK, TIU, dan TKP dengan ratusan soal dan tryout simulasi SKD. Dipandu tutor berpengalaman CPNS.", price: 156000, durationDays: 90, category: "CPNS", isActive: true },
     { name: "Bimbel UTBK SMA Kelas 12", description: "Persiapan UTBK lengkap untuk siswa SMA kelas 12. Mencakup TPS, Matematika, dan mata pelajaran pilihan. Tryout mingguan.", price: 350000, durationDays: 60, category: "SMA", isActive: true },
     { name: "Bimbel Matematika SMP", description: "Modul matematika SMP lengkap dari bilangan hingga statistika. Cocok untuk persiapan ujian akhir dan olimpiade.", price: 199000, durationDays: 45, category: "SMP", isActive: true },
     { name: "Calistung dan Matematika SD", description: "Program belajar membaca, menulis, berhitung untuk SD kelas 1-6. Metode fun learning.", price: 149000, durationDays: 30, category: "SD", isActive: true },
@@ -147,7 +147,7 @@ async function seed() {
   const expiredAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
   const [order] = await db.insert(ordersTable).values({
-    userId: 3, packageId: 1, orderCode: "INV-20260509-00001", amount: 141000, uniqueAmount: 123, status: "PAID", expiredAt,
+    userId: 3, packageId: 1, orderCode: "INV-20260509-00001", amount: 156000, uniqueAmount: 123, status: "PAID", expiredAt,
   }).returning();
   await db.insert(enrollmentsTable).values({ userId: 3, packageId: 1, expiredAt: expiresAt });
   void order;

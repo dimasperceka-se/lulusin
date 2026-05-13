@@ -324,7 +324,6 @@ export default function PackageDetail() {
                   <span className="font-display text-4xl font-bold tracking-tight">
                     {formatRupiah(pkg.price)}
                   </span>
-                  <span className="text-sm text-muted-foreground">+ PPN 11%</span>
                 </div>
                 <CardDescription className="pt-1">
                   Akses penuh selama {pkg.durationDays} hari

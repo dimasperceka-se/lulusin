@@ -166,7 +166,6 @@ export default function Packages() {
                       <CardTitle className="line-clamp-2 text-lg">{pkg.name}</CardTitle>
                       <CardDescription className="font-display font-bold text-2xl text-foreground mt-2">
                         {formatRupiah(pkg.price)}
-                        <span className="block text-xs font-normal text-muted-foreground mt-0.5">+ PPN 11%</span>
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1">

@@ -9,12 +9,6 @@ export function formatRupiah(amount: number): string {
   return "Rp " + amount.toLocaleString("id-ID");
 }
 
-export const TAX_RATE = 0.11;
-
-export function calculateTax(baseAmount: number): number {
-  return Math.round(baseAmount * TAX_RATE);
-}
-
 export function formatDate(dateStr: string | Date): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
