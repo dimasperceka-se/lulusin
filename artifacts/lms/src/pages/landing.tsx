@@ -645,25 +645,35 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
-            {TESTIMONI_CARDS.map((t, idx) => (
-              <motion.div
-                key={t.src}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.5, ease: "easeOut", delay: idx * 0.1 }}
-                className="overflow-hidden rounded-2xl shadow-lift"
-              >
-                <img
-                  src={t.src}
-                  alt={t.alt}
-                  className="block w-full h-auto"
-                  loading="lazy"
-                />
-              </motion.div>
-            ))}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <div
+              className="flex gap-5 md:gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-thin pb-4 -mx-4 px-4 md:-mx-2 md:px-2"
+              role="region"
+              aria-label="Testimoni pengguna"
+            >
+              {TESTIMONI_CARDS.map((t) => (
+                <div
+                  key={t.src}
+                  className="snap-start shrink-0 w-[85%] sm:w-[60%] md:w-[48%] lg:w-[42%] overflow-hidden rounded-2xl shadow-lift bg-card"
+                >
+                  <img
+                    src={t.src}
+                    alt={t.alt}
+                    className="block w-full h-auto"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-xs text-muted-foreground mt-2 md:hidden">
+              ← geser untuk lihat testimoni lain →
+            </p>
+          </motion.div>
         </div>
       </section>
 
