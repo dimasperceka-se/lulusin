@@ -1,15 +1,27 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetAttempt } from "@workspace/api-client-react";
+import { useGetAttempt, useRateAttempt, getGetAttemptQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SidebarLayout } from "@/components/sidebar-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, CheckCircle, XCircle, Clock, Award, BarChart3, AlertCircle } from "lucide-react";
-import { formatDuration } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Trophy, CheckCircle, XCircle, Clock, Award, BarChart3, AlertCircle, Star } from "lucide-react";
+import { formatScore, cn } from "@/lib/utils";
 
 export default function TryoutResult() {
   const { attemptId } = useParams();
-  const { data: attempt, isLoading } = useGetAttempt(Number(attemptId));
+  const id = Number(attemptId);
+  const { data: attempt, isLoading } = useGetAttempt(id);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const rateMutation = useRateAttempt();
+
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [pendingRating, setPendingRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>("");
 
   // Determine if it's CPNS style based on scores existing
   const isCPNS = attempt?.twkScore !== undefined && attempt?.twkScore !== null;
@@ -59,7 +71,7 @@ export default function TryoutResult() {
               
               <div className="flex flex-col items-center justify-center p-6 bg-white rounded-full h-40 w-40 shadow-sm border-4 border-primary/10">
                 <span className="text-sm text-muted-foreground font-medium mb-1">Skor Total</span>
-                <span className="text-5xl font-black text-primary">{attempt.score}</span>
+                <span className="text-5xl font-black text-primary tabular-nums">{formatScore(attempt.score)}</span>
               </div>
             </CardContent>
           </Card>
@@ -112,6 +124,99 @@ export default function TryoutResult() {
             </CardContent>
           </Card>
         )}
+
+        {/* Rating Card */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-500" />
+              {attempt.rating ? "Rating Kamu" : "Beri Rating"}
+            </CardTitle>
+            <CardDescription>
+              {attempt.rating
+                ? "Terima kasih sudah memberi rating untuk sesi ini."
+                : `Bagaimana kualitas ${attempt.type === "tryout" ? "tryout" : "kuis"} ini? Bantu kami meningkatkan konten.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              className="flex items-center gap-1"
+              onMouseLeave={() => !attempt.rating && setHoverRating(0)}
+            >
+              {[1, 2, 3, 4, 5].map((star) => {
+                const active = (attempt.rating ?? hoverRating ?? pendingRating) >= star;
+                const submitted = !!attempt.rating;
+                return (
+                  <button
+                    key={star}
+                    type="button"
+                    disabled={submitted || rateMutation.isPending}
+                    onMouseEnter={() => !submitted && setHoverRating(star)}
+                    onClick={() => !submitted && setPendingRating(star)}
+                    className={cn(
+                      "p-1 transition-transform",
+                      !submitted && "hover:scale-110 cursor-pointer",
+                      submitted && "cursor-default",
+                    )}
+                    aria-label={`${star} bintang`}
+                  >
+                    <Star
+                      className={cn(
+                        "w-8 h-8 transition-colors",
+                        active ? "fill-yellow-400 text-yellow-400" : "fill-none text-muted-foreground/40",
+                      )}
+                    />
+                  </button>
+                );
+              })}
+              {attempt.rating && (
+                <span className="ml-3 text-sm text-muted-foreground">
+                  ({attempt.rating}/5)
+                </span>
+              )}
+            </div>
+
+            {attempt.rating ? (
+              attempt.ratingComment && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Komentar kamu</p>
+                  <p className="leading-relaxed whitespace-pre-wrap">{attempt.ratingComment}</p>
+                </div>
+              )
+            ) : (
+              <>
+                <Textarea
+                  placeholder="Komentar (opsional) — apa yang bisa ditingkatkan?"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  maxLength={1000}
+                  rows={3}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    disabled={pendingRating === 0 || rateMutation.isPending}
+                    onClick={() => {
+                      rateMutation.mutate(
+                        { id, data: { rating: pendingRating, comment: comment.trim() || null } },
+                        {
+                          onSuccess: () => {
+                            queryClient.invalidateQueries({ queryKey: getGetAttemptQueryKey(id) });
+                            toast({ title: "Terima kasih atas rating-mu!" });
+                          },
+                          onError: () => {
+                            toast({ title: "Gagal mengirim rating", variant: "destructive" });
+                          },
+                        },
+                      );
+                    }}
+                  >
+                    {rateMutation.isPending ? "Mengirim..." : "Kirim Rating"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Answer Review List */}
         <div className="space-y-4">
@@ -167,7 +272,7 @@ function ScoreBox({ label, score, passing, max }: { label: string, score: number
       <div className={`absolute top-0 left-0 w-1 h-full ${isPass ? 'bg-green-500' : 'bg-red-500'}`} />
       <p className="text-sm font-medium text-muted-foreground mb-2 h-10">{label}</p>
       <div className="flex items-end gap-2">
-        <span className="text-3xl font-bold">{score}</span>
+        <span className="text-3xl font-bold tabular-nums">{formatScore(score)}</span>
         <span className="text-sm text-muted-foreground pb-1">/ {max}</span>
       </div>
       <div className="mt-3 text-xs flex justify-between">

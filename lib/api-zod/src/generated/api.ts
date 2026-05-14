@@ -1452,6 +1452,8 @@ export const SubmitAttemptBody = zod.object({
   answers: zod.record(zod.string(), zod.string()),
 });
 
+export const submitAttemptResponseRatingMax = 5;
+
 export const SubmitAttemptResponse = zod.object({
   id: zod.number(),
   userId: zod.number(),
@@ -1469,6 +1471,9 @@ export const SubmitAttemptResponse = zod.object({
   totalParticipants: zod.number().nullish(),
   startedAt: zod.string(),
   finishedAt: zod.string(),
+  rating: zod.number().min(1).max(submitAttemptResponseRatingMax).nullish(),
+  ratingComment: zod.string().nullish(),
+  ratedAt: zod.string().nullish(),
   answers: zod
     .array(
       zod.object({
@@ -1496,6 +1501,8 @@ export const GetAttemptParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getAttemptResponseRatingMax = 5;
+
 export const GetAttemptResponse = zod.object({
   id: zod.number(),
   userId: zod.number(),
@@ -1513,6 +1520,9 @@ export const GetAttemptResponse = zod.object({
   totalParticipants: zod.number().nullish(),
   startedAt: zod.string(),
   finishedAt: zod.string(),
+  rating: zod.number().min(1).max(getAttemptResponseRatingMax).nullish(),
+  ratingComment: zod.string().nullish(),
+  ratedAt: zod.string().nullish(),
   answers: zod
     .array(
       zod.object({
@@ -1534,6 +1544,41 @@ export const GetAttemptResponse = zod.object({
 });
 
 /**
+ * @summary Submit a rating (and optional comment) for a completed attempt
+ */
+export const RateAttemptParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const rateAttemptBodyRatingMax = 5;
+
+export const rateAttemptBodyCommentMax = 1000;
+
+export const RateAttemptBody = zod.object({
+  rating: zod.number().min(1).max(rateAttemptBodyRatingMax),
+  comment: zod.string().max(rateAttemptBodyCommentMax).nullish(),
+});
+
+export const rateAttemptResponseRatingMax = 5;
+
+export const RateAttemptResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  quizId: zod.number().nullish(),
+  tryoutId: zod.number().nullish(),
+  type: zod.enum(["quiz", "tryout"]),
+  score: zod.number().nullish(),
+  rating: zod.number().min(1).max(rateAttemptResponseRatingMax).nullish(),
+  ratingComment: zod.string().nullish(),
+  ratedAt: zod.string().nullish(),
+  startedAt: zod.string(),
+  finishedAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  quizTitle: zod.string().nullish(),
+  tryoutTitle: zod.string().nullish(),
+});
+
+/**
  * @summary List my attempts (student)
  */
 export const ListAttemptsQueryParams = zod.object({
@@ -1542,6 +1587,8 @@ export const ListAttemptsQueryParams = zod.object({
   tryoutId: zod.coerce.number().optional(),
 });
 
+export const listAttemptsResponseRatingMax = 5;
+
 export const ListAttemptsResponseItem = zod.object({
   id: zod.number(),
   userId: zod.number(),
@@ -1549,6 +1596,9 @@ export const ListAttemptsResponseItem = zod.object({
   tryoutId: zod.number().nullish(),
   type: zod.enum(["quiz", "tryout"]),
   score: zod.number().nullish(),
+  rating: zod.number().min(1).max(listAttemptsResponseRatingMax).nullish(),
+  ratingComment: zod.string().nullish(),
+  ratedAt: zod.string().nullish(),
   startedAt: zod.string(),
   finishedAt: zod.string().nullish(),
   createdAt: zod.string(),
@@ -1730,6 +1780,8 @@ export const MarkCommissionPaidResponse = zod.object({
 /**
  * @summary Get student dashboard overview
  */
+export const getStudentDashboardResponseRecentAttemptsItemRatingMax = 5;
+
 export const GetStudentDashboardResponse = zod.object({
   activeEnrollments: zod.array(
     zod.object({
@@ -1775,6 +1827,13 @@ export const GetStudentDashboardResponse = zod.object({
         tryoutId: zod.number().nullish(),
         type: zod.enum(["quiz", "tryout"]),
         score: zod.number().nullish(),
+        rating: zod
+          .number()
+          .min(1)
+          .max(getStudentDashboardResponseRecentAttemptsItemRatingMax)
+          .nullish(),
+        ratingComment: zod.string().nullish(),
+        ratedAt: zod.string().nullish(),
         startedAt: zod.string(),
         finishedAt: zod.string().nullish(),
         createdAt: zod.string(),

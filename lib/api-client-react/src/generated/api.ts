@@ -20,6 +20,7 @@ import type {
   AdminReferralStats,
   AdminStats,
   Attempt,
+  AttemptRatingInput,
   AttemptResult,
   AttemptSubmitInput,
   AuthResponse,
@@ -5210,6 +5211,93 @@ export function useGetAttempt<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Submit a rating (and optional comment) for a completed attempt
+ */
+export const getRateAttemptUrl = (id: number) => {
+  return `/api/attempts/${id}/rate`;
+};
+
+export const rateAttempt = async (
+  id: number,
+  attemptRatingInput: AttemptRatingInput,
+  options?: RequestInit,
+): Promise<Attempt> => {
+  return customFetch<Attempt>(getRateAttemptUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(attemptRatingInput),
+  });
+};
+
+export const getRateAttemptMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rateAttempt>>,
+    TError,
+    { id: number; data: BodyType<AttemptRatingInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rateAttempt>>,
+  TError,
+  { id: number; data: BodyType<AttemptRatingInput> },
+  TContext
+> => {
+  const mutationKey = ["rateAttempt"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rateAttempt>>,
+    { id: number; data: BodyType<AttemptRatingInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rateAttempt(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RateAttemptMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rateAttempt>>
+>;
+export type RateAttemptMutationBody = BodyType<AttemptRatingInput>;
+export type RateAttemptMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Submit a rating (and optional comment) for a completed attempt
+ */
+export const useRateAttempt = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rateAttempt>>,
+    TError,
+    { id: number; data: BodyType<AttemptRatingInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rateAttempt>>,
+  TError,
+  { id: number; data: BodyType<AttemptRatingInput> },
+  TContext
+> => {
+  return useMutation(getRateAttemptMutationOptions(options));
+};
 
 /**
  * @summary List my attempts (student)

@@ -32,5 +32,15 @@ export interface AttemptResult {
   totalParticipants?: number | null;
   startedAt: string;
   finishedAt: string;
+  /**
+   * @minimum 1
+   * @maximum 5
+   * @nullable
+   */
+  rating?: number | null;
+  /** @nullable */
+  ratingComment?: string | null;
+  /** @nullable */
+  ratedAt?: string | null;
   answers?: AnswerDetail[];
 }

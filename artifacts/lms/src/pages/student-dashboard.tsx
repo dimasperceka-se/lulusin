@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Trophy, Clock, CheckCircle2, ArrowRight, FileQuestion, GraduationCap } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { formatScore } from "@/lib/utils";
 
 export default function StudentDashboard() {
   const { data: dashboard, isLoading } = useGetStudentDashboard();
@@ -80,7 +81,7 @@ export default function StudentDashboard() {
               </span>
             </CardHeader>
             <CardContent>
-              <div className="font-display text-3xl font-bold">{typeof dashboard?.latestTryoutScore === 'number' ? dashboard.latestTryoutScore.toFixed(2) : '-'}</div>
+              <div className="font-display text-3xl font-bold tabular-nums">{formatScore(dashboard?.latestTryoutScore)}</div>
               <p className="text-xs text-muted-foreground mt-1">Skor tertinggi</p>
             </CardContent>
           </Card>
@@ -218,7 +219,7 @@ export default function StudentDashboard() {
                       <p className="font-medium">{attempt.tryoutTitle || attempt.quizTitle || 'Tidak ada judul'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">{attempt.score !== null ? attempt.score : '-'}</p>
+                      <p className="text-2xl font-bold text-primary tabular-nums">{formatScore(attempt.score)}</p>
                       <p className="text-xs text-muted-foreground">Skor Akhir</p>
                     </div>
                   </div>

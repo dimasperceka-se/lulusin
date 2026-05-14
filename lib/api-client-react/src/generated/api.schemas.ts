@@ -678,6 +678,16 @@ export interface Attempt {
   type: AttemptType;
   /** @nullable */
   score?: number | null;
+  /**
+   * @minimum 1
+   * @maximum 5
+   * @nullable
+   */
+  rating?: number | null;
+  /** @nullable */
+  ratingComment?: string | null;
+  /** @nullable */
+  ratedAt?: string | null;
   startedAt: string;
   /** @nullable */
   finishedAt?: string | null;
@@ -692,6 +702,19 @@ export type AttemptSubmitInputAnswers = { [key: string]: string };
 
 export interface AttemptSubmitInput {
   answers: AttemptSubmitInputAnswers;
+}
+
+export interface AttemptRatingInput {
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  /**
+   * @maxLength 1000
+   * @nullable
+   */
+  comment?: string | null;
 }
 
 export interface AnswerDetail {
@@ -737,6 +760,16 @@ export interface AttemptResult {
   totalParticipants?: number | null;
   startedAt: string;
   finishedAt: string;
+  /**
+   * @minimum 1
+   * @maximum 5
+   * @nullable
+   */
+  rating?: number | null;
+  /** @nullable */
+  ratingComment?: string | null;
+  /** @nullable */
+  ratedAt?: string | null;
   answers?: AnswerDetail[];
 }
 

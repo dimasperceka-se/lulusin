@@ -17,6 +17,16 @@ export interface Attempt {
   type: AttemptType;
   /** @nullable */
   score?: number | null;
+  /**
+   * @minimum 1
+   * @maximum 5
+   * @nullable
+   */
+  rating?: number | null;
+  /** @nullable */
+  ratingComment?: string | null;
+  /** @nullable */
+  ratedAt?: string | null;
   startedAt: string;
   /** @nullable */
   finishedAt?: string | null;

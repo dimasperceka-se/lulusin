@@ -1387,6 +1387,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/AttemptResult"
 
+  /attempts/{id}/rate:
+    post:
+      operationId: rateAttempt
+      tags: [attempts]
+      summary: Submit a rating (and optional comment) for a completed attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptRatingInput"
+      responses:
+        "200":
+          description: Updated attempt with rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attempt"
+
   /attempts:
     get:
       operationId: listAttempts
@@ -2534,6 +2561,14 @@ components:
           enum: [quiz, tryout]
         score:
           type: ["number", "null"]
+        rating:
+          type: ["integer", "null"]
+          minimum: 1
+          maximum: 5
+        ratingComment:
+          type: ["string", "null"]
+        ratedAt:
+          type: ["string", "null"]
         startedAt:
           type: string
         finishedAt:
@@ -2553,6 +2588,18 @@ components:
           type: object
           additionalProperties:
             type: string
+
+    AttemptRatingInput:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: ["string", "null"]
+          maxLength: 1000
 
     AttemptResult:
       type: object
@@ -2590,6 +2637,14 @@ components:
           type: string
         finishedAt:
           type: string
+        rating:
+          type: ["integer", "null"]
+          minimum: 1
+          maximum: 5
+        ratingComment:
+          type: ["string", "null"]
+        ratedAt:
+          type: ["string", "null"]
         answers:
           type: array
           items:

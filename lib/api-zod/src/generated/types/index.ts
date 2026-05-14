@@ -10,6 +10,7 @@ export * from "./adminReferralStats";
 export * from "./adminStats";
 export * from "./answerDetail";
 export * from "./attempt";
+export * from "./attemptRatingInput";
 export * from "./attemptResult";
 export * from "./attemptSubmitInput";
 export * from "./attemptSubmitInputAnswers";

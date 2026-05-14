@@ -9,6 +9,11 @@ export function formatRupiah(amount: number): string {
   return "Rp " + amount.toLocaleString("id-ID");
 }
 
+export function formatScore(value: number | null | undefined, fallback = "-"): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return fallback;
+  return Number(value).toFixed(2);
+}
+
 export function formatDate(dateStr: string | Date): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });

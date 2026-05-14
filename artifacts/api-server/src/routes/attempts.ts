@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, attemptsTable, quizzesTable, quizQuestionsTable, tryoutsTable, tryoutQuestionsTable, questionsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authenticate } from "../middlewares/auth";
-import { SubmitAttemptBody, ListAttemptsQueryParams } from "@workspace/api-zod";
+import { SubmitAttemptBody, ListAttemptsQueryParams, RateAttemptBody } from "@workspace/api-zod";
 
 const router = Router();
 
@@ -150,6 +150,36 @@ router.post("/attempts/:id/submit", authenticate, async (req, res): Promise<void
     quizTitle,
     tryoutTitle,
   });
+});
+
+router.post("/attempts/:id/rate", authenticate, async (req, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const parsed = RateAttemptBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [attempt] = await db.select().from(attemptsTable).where(
+    and(eq(attemptsTable.id, id), eq(attemptsTable.userId, req.user!.userId))
+  );
+  if (!attempt) {
+    res.status(404).json({ error: "Attempt not found" });
+    return;
+  }
+  if (!attempt.finishedAt) {
+    res.status(400).json({ error: "Attempt has not been submitted yet" });
+    return;
+  }
+
+  const ratingComment = parsed.data.comment?.trim() || null;
+  const [updated] = await db.update(attemptsTable).set({
+    rating: parsed.data.rating,
+    ratingComment,
+    ratedAt: new Date(),
+  }).where(eq(attemptsTable.id, id)).returning();
+
+  res.json(updated);
 });
 
 router.get("/attempts/:id", authenticate, async (req, res): Promise<void> => {
