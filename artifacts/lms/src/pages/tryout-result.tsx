@@ -144,7 +144,8 @@ export default function TryoutResult() {
               onMouseLeave={() => !attempt.rating && setHoverRating(0)}
             >
               {[1, 2, 3, 4, 5].map((star) => {
-                const active = (attempt.rating ?? hoverRating ?? pendingRating) >= star;
+                const display = attempt.rating || hoverRating || pendingRating;
+                const active = display >= star;
                 const submitted = !!attempt.rating;
                 return (
                   <button
