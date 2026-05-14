@@ -44,14 +44,6 @@ export default function PackageDetail() {
   const [appliedReferral, setAppliedReferral] = useState<{ code: string; holderName: string; discountPercent: number } | null>(null);
   const [validating, setValidating] = useState(false);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("ref");
-    if (ref) {
-      setReferralInput(ref.toUpperCase());
-    }
-  }, []);
-
   const { data: pkg, isLoading } = useGetPackage(packageId, {
     query: {
       enabled: !!packageId,
@@ -60,9 +52,11 @@ export default function PackageDetail() {
 
   const createOrderMutation = useCreateOrder();
 
-  const handleApplyReferral = async () => {
-    const code = referralInput.trim().toUpperCase();
-    if (!code) return;
+  // Returns the applied code on success, or null on failure/invalid.
+  // notify=false suppresses toast (used for silent auto-apply on mount).
+  const applyReferralCode = async (rawCode: string, notify = true): Promise<string | null> => {
+    const code = rawCode.trim().toUpperCase();
+    if (!code) return null;
     setValidating(true);
     try {
       const result = await validateReferralCode({ code });
@@ -72,35 +66,56 @@ export default function PackageDetail() {
           holderName: result.holderName ?? "Partner Lulusin",
           discountPercent: result.discountPercent ?? 10,
         });
-        toast({
-          title: "Kode referal diterapkan",
-          description: `Diskon ${result.discountPercent ?? 10}% dari ${result.holderName ?? "Partner Lulusin"}`,
-        });
-      } else {
-        setAppliedReferral(null);
+        if (notify) {
+          toast({
+            title: "Kode referal diterapkan",
+            description: `Diskon ${result.discountPercent ?? 10}% dari ${result.holderName ?? "Partner Lulusin"}`,
+          });
+        }
+        return code;
+      }
+      setAppliedReferral(null);
+      if (notify) {
         toast({
           title: "Kode tidak valid",
           description: result.error ?? "Kode referal tidak ditemukan.",
           variant: "destructive",
         });
       }
+      return null;
     } catch {
-      toast({
-        title: "Gagal validasi",
-        description: "Tidak bisa menghubungi server. Coba lagi.",
-        variant: "destructive",
-      });
+      if (notify) {
+        toast({
+          title: "Gagal validasi",
+          description: "Tidak bisa menghubungi server. Coba lagi.",
+          variant: "destructive",
+        });
+      }
+      return null;
     } finally {
       setValidating(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      const code = ref.toUpperCase();
+      setReferralInput(code);
+      void applyReferralCode(code, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleApplyReferral = () => applyReferralCode(referralInput);
 
   const handleRemoveReferral = () => {
     setAppliedReferral(null);
     setReferralInput("");
   };
 
-  const handleBuy = () => {
+  const handleBuy = async () => {
     if (pkg?.maintenanceMode) {
       toast({
         title: "Paket dalam maintenance",
@@ -118,7 +133,16 @@ export default function PackageDetail() {
       return;
     }
 
-    createOrderMutation.mutate({ data: { packageId, referralCode: appliedReferral?.code } }, {
+    // If user typed a code but didn't click "Terapkan", apply it now before creating order.
+    let codeToUse = appliedReferral?.code;
+    const pendingInput = referralInput.trim().toUpperCase();
+    if (!codeToUse && pendingInput) {
+      const applied = await applyReferralCode(pendingInput);
+      if (!applied) return; // invalid; abort buy so user can fix or remove
+      codeToUse = applied;
+    }
+
+    createOrderMutation.mutate({ data: { packageId, referralCode: codeToUse } }, {
       onSuccess: (order) => {
         toast({
           title: "Pesanan berhasil dibuat",

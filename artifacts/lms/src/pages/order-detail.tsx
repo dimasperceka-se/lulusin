@@ -184,13 +184,21 @@ export default function OrderDetail() {
                       {order.package?.category} • {order.package?.durationDays} Hari Aktif
                     </p>
                   </div>
-                  <p className="font-medium">{formatRupiah(order.amount)}</p>
+                  <p className="font-medium">{formatRupiah(order.amount + (order.discountAmount ?? 0))}</p>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Harga Paket</span>
-                  <span>{formatRupiah(order.amount)}</span>
+                  <span>{formatRupiah(order.amount + (order.discountAmount ?? 0))}</span>
                 </div>
+                {order.discountAmount && order.discountAmount > 0 ? (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">
+                      Diskon Referal{order.referralCode ? ` (${order.referralCode})` : ""}
+                    </span>
+                    <span className="text-emerald-600 font-medium">−{formatRupiah(order.discountAmount)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Kode Unik</span>
                   <span className="text-accent font-medium">+{order.uniqueAmount}</span>
