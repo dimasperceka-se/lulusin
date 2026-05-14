@@ -10,6 +10,9 @@
     "import-belajarbro": "tsx --env-file=../artifacts/api-server/.env ./src/import-belajarbro.ts",
     "import-tiu-100": "tsx --env-file=../artifacts/api-server/.env ./src/import-tiu-100.ts",
     "import-materi-tiu": "tsx --env-file=../artifacts/api-server/.env ./src/import-materi-tiu.ts",
+    "import-hots-2026": "tsx --env-file=../artifacts/api-server/.env ./src/import-hots-2026.ts",
+    "import-hots-2024": "tsx --env-file=../artifacts/api-server/.env ./src/import-hots-2024.ts",
+    "import-hots-2023": "tsx --env-file=../artifacts/api-server/.env ./src/import-hots-2023.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
