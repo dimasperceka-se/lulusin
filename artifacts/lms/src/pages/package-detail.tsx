@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useGetPackage, useCreateOrder, validateReferralCode } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
@@ -108,6 +108,23 @@ export default function PackageDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const materialsByCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const m of pkg?.materials ?? []) {
+      const key = (m.category && m.category.trim()) || "Lainnya";
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const preferred = ["TIU", "TWK", "TKP"];
+    return Array.from(counts.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => {
+        const ia = preferred.indexOf(a.category);
+        const ib = preferred.indexOf(b.category);
+        if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        return a.category.localeCompare(b.category);
+      });
+  }, [pkg?.materials]);
+
   const handleApplyReferral = () => applyReferralCode(referralInput);
 
   const handleRemoveReferral = () => {
@@ -166,7 +183,7 @@ export default function PackageDetail() {
         <Navbar />
         <div className="container mx-auto px-4 py-10 max-w-6xl">
           <Skeleton className="h-72 w-full mb-8 rounded-3xl" />
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2 space-y-4">
               <Skeleton className="h-10 w-3/4" />
               <Skeleton className="h-24 w-full" />
@@ -256,7 +273,7 @@ export default function PackageDetail() {
             </span>
           </Link>
 
-          <div className="grid md:grid-cols-5 gap-10 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-10 items-center">
             <div className="md:col-span-2">
               {pkg.thumbnail ? (
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-lift ring-1 ring-white/10">
@@ -317,88 +334,80 @@ export default function PackageDetail() {
 
       {/* Body */}
       <section className="container mx-auto px-4 py-12 max-w-6xl -mt-10">
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6 min-w-0">
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="font-display text-xl flex items-center gap-2">
                   <span className="grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary">
-                    <BookOpen className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4" />
                   </span>
-                  Materi Pembelajaran
+                  Fasilitas
                 </CardTitle>
-                <CardDescription>
-                  {materialCount > 0
-                    ? `${materialCount} materi PDF yang komprehensif`
-                    : "Materi akan segera ditambahkan"}
-                </CardDescription>
+                <CardDescription>Yang kamu dapatkan dengan paket ini</CardDescription>
               </CardHeader>
-              <CardContent>
-                {pkg.materials && pkg.materials.length > 0 ? (
-                  <ul className="space-y-2">
-                    {pkg.materials.map((mat, i) => (
-                      <li
-                        key={mat.id}
-                        className="flex gap-4 items-start p-3 rounded-xl hover:bg-muted/60 transition-colors border border-transparent hover:border-border"
-                      >
-                        <div className="grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary flex-shrink-0 text-sm font-semibold mt-0.5">
-                          {i + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{mat.title}</p>
-                          {mat.description && (
-                            <p className="text-sm text-muted-foreground mt-0.5">{mat.description}</p>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-center py-10 px-6 rounded-xl border border-dashed border-border">
-                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-muted mb-3">
-                      <BookOpen className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Belum ada materi untuk paket ini.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Card className="shadow-soft hover-lift">
-                <CardContent className="p-5 flex items-start gap-4">
-                  <span className="grid place-items-center h-11 w-11 rounded-xl bg-primary/10 text-primary flex-shrink-0">
+              <CardContent className="space-y-3">
+                <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary flex-shrink-0">
                     <FileText className="h-5 w-5" />
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">Kuis Latihan</p>
-                    <p className="font-display text-2xl font-bold mt-0.5">
-                      {quizCount > 0 ? quizCount : "—"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {quizCount > 0 ? "Kuis per sub-materi" : "Belum tersedia"}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Kuis Latihan</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {quizCount > 0
+                        ? `${quizCount} kuis untuk berlatih per sub-materi`
+                        : "Belum tersedia"}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card className="shadow-soft hover-lift">
-                <CardContent className="p-5 flex items-start gap-4">
-                  <span className="grid place-items-center h-11 w-11 rounded-xl bg-accent/10 text-accent flex-shrink-0">
+                <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/10 text-accent flex-shrink-0">
+                    <BookOpen className="h-5 w-5" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Materi Pembelajaran</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {materialCount > 0
+                        ? `${materialCount} materi PDF komprehensif`
+                        : "Materi akan segera ditambahkan"}
+                    </p>
+                    {materialsByCategory.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {materialsByCategory.map(({ category, count }) => (
+                          <Badge key={category} variant="secondary" className="font-medium">
+                            {category}: {count}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-success/10 text-success flex-shrink-0">
                     <Trophy className="h-5 w-5" />
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">Tryout Akbar</p>
-                    <p className="font-display text-2xl font-bold mt-0.5">
-                      {tryoutCount > 0 ? tryoutCount : "—"}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Tryout Akbar</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {tryoutCount > 0
+                        ? `${tryoutCount} simulasi ujian CBT`
+                        : "Belum tersedia"}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {tryoutCount > 0 ? "Simulasi ujian CBT" : "Belum tersedia"}
-                    </p>
+                    {pkg.tryouts && pkg.tryouts.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {pkg.tryouts.map((t) => (
+                          <Badge key={t.id} variant="outline" className="font-medium">
+                            {t.title}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Buy card */}
