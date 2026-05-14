@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.SESSION_SECRET ?? "fallback-secret-change-me";
 export interface AuthPayload {
   userId: number;
   email: string;
-  role: "admin" | "tutor" | "student";
+  role: "admin" | "tutor" | "student" | "referral_holder";
 }
 
 declare global {

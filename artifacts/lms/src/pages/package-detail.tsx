@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { useGetPackage, useCreateOrder } from "@workspace/api-client-react";
+import { useGetPackage, useCreateOrder, validateReferralCode } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/navbar";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,8 @@ import {
   ArrowLeft,
   Trophy,
   Wrench,
+  Tag,
+  X,
 } from "lucide-react";
 
 export default function PackageDetail() {
@@ -36,6 +40,18 @@ export default function PackageDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const [referralInput, setReferralInput] = useState("");
+  const [appliedReferral, setAppliedReferral] = useState<{ code: string; holderName: string; discountPercent: number } | null>(null);
+  const [validating, setValidating] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      setReferralInput(ref.toUpperCase());
+    }
+  }, []);
+
   const { data: pkg, isLoading } = useGetPackage(packageId, {
     query: {
       enabled: !!packageId,
@@ -43,6 +59,46 @@ export default function PackageDetail() {
   });
 
   const createOrderMutation = useCreateOrder();
+
+  const handleApplyReferral = async () => {
+    const code = referralInput.trim().toUpperCase();
+    if (!code) return;
+    setValidating(true);
+    try {
+      const result = await validateReferralCode({ code });
+      if (result.valid) {
+        setAppliedReferral({
+          code,
+          holderName: result.holderName ?? "Partner Lulusin",
+          discountPercent: result.discountPercent ?? 10,
+        });
+        toast({
+          title: "Kode referal diterapkan",
+          description: `Diskon ${result.discountPercent ?? 10}% dari ${result.holderName ?? "Partner Lulusin"}`,
+        });
+      } else {
+        setAppliedReferral(null);
+        toast({
+          title: "Kode tidak valid",
+          description: result.error ?? "Kode referal tidak ditemukan.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Gagal validasi",
+        description: "Tidak bisa menghubungi server. Coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleRemoveReferral = () => {
+    setAppliedReferral(null);
+    setReferralInput("");
+  };
 
   const handleBuy = () => {
     if (pkg?.maintenanceMode) {
@@ -62,7 +118,7 @@ export default function PackageDetail() {
       return;
     }
 
-    createOrderMutation.mutate({ data: { packageId } }, {
+    createOrderMutation.mutate({ data: { packageId, referralCode: appliedReferral?.code } }, {
       onSuccess: (order) => {
         toast({
           title: "Pesanan berhasil dibuat",
@@ -329,11 +385,27 @@ export default function PackageDetail() {
                   <Sparkles className="h-3 w-3 mr-1" />
                   Harga spesial
                 </Badge>
-                <div className="flex items-baseline gap-2 pt-2">
-                  <span className="font-display text-4xl font-bold tracking-tight">
-                    {formatRupiah(pkg.price)}
-                  </span>
-                </div>
+                {appliedReferral ? (
+                  <div className="pt-2 space-y-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-display text-4xl font-bold tracking-tight text-primary">
+                        {formatRupiah(Math.round(pkg.price * (1 - appliedReferral.discountPercent / 100)))}
+                      </span>
+                      <span className="text-base text-muted-foreground line-through">
+                        {formatRupiah(pkg.price)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-emerald-600 font-medium">
+                      Hemat {formatRupiah(Math.round(pkg.price * (appliedReferral.discountPercent / 100)))} dengan kode {appliedReferral.code}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-2 pt-2">
+                    <span className="font-display text-4xl font-bold tracking-tight">
+                      {formatRupiah(pkg.price)}
+                    </span>
+                  </div>
+                )}
                 <CardDescription className="pt-1">
                   Akses penuh selama {pkg.durationDays} hari
                 </CardDescription>
@@ -376,6 +448,42 @@ export default function PackageDetail() {
                   </>
                 ) : (
                   <>
+                    <div className="space-y-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3">
+                      <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                        <Tag className="h-3.5 w-3.5" />
+                        Punya kode referal?
+                      </div>
+                      {appliedReferral ? (
+                        <div className="flex items-center justify-between gap-2 rounded-lg bg-background border border-emerald-200 px-3 py-2 text-sm">
+                          <div className="min-w-0">
+                            <div className="font-mono font-semibold text-emerald-700">{appliedReferral.code}</div>
+                            <div className="text-xs text-muted-foreground truncate">Dari {appliedReferral.holderName}</div>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={handleRemoveReferral} aria-label="Hapus kode">
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="MISAL: BUDIPARTNER"
+                            value={referralInput}
+                            onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyReferral(); } }}
+                            className="h-9 uppercase text-sm"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={handleApplyReferral}
+                            disabled={validating || !referralInput.trim()}
+                          >
+                            {validating ? "..." : "Terapkan"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <Button
                       size="lg"
                       className="w-full text-base font-semibold h-12 shadow-glow"

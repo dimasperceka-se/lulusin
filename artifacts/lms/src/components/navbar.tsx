@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, LayoutDashboard, Menu } from "lucide-react";
+import { LogOut, User, LayoutDashboard, Menu, Handshake } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -59,7 +59,7 @@ export function Navbar() {
             </span>
           </Link>
 
-          <div className="hidden md:flex gap-1">
+          <div className="hidden md:flex gap-1 items-center">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}>
                 <span className="relative px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer group">
@@ -68,6 +68,12 @@ export function Navbar() {
                 </span>
               </Link>
             ))}
+            <Link href="/form-referal">
+              <span className="ml-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-primary/15 to-accent/15 text-primary border border-primary/25 hover:border-primary/50 hover:from-primary/25 hover:to-accent/25 transition-all cursor-pointer">
+                <Handshake className="h-3.5 w-3.5" />
+                Jadi Partner
+              </span>
+            </Link>
           </div>
         </div>
 
@@ -148,6 +154,12 @@ export function Navbar() {
                     </span>
                   </Link>
                 ))}
+                <Link href="/form-referal">
+                  <span className="flex items-center gap-2 px-3 py-3 rounded-lg text-base font-semibold text-primary hover:bg-muted cursor-pointer">
+                    <Handshake className="h-4 w-4" />
+                    Jadi Partner
+                  </span>
+                </Link>
                 {!user && (
                   <div className="flex flex-col gap-2 mt-6">
                     <Link href="/login">

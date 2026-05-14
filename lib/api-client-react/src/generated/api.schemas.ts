@@ -34,6 +34,7 @@ export const UserRole = {
   admin: "admin",
   tutor: "tutor",
   student: "student",
+  referral_holder: "referral_holder",
 } as const;
 
 export interface User {
@@ -312,6 +313,11 @@ export interface Order {
   paidAt?: string | null;
   /** @nullable */
   rejectionReason?: string | null;
+  /** @nullable */
+  referralCode?: string | null;
+  /** @nullable */
+  referralHolderId?: number | null;
+  discountAmount?: number;
   createdAt: string;
   /**
    * Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.
@@ -339,6 +345,11 @@ export const OrderInputPaymentMethod = {
 export interface OrderInput {
   packageId: number;
   paymentMethod?: OrderInputPaymentMethod;
+  /**
+   * Optional referral code applied to this order; triggers 10% discount if valid.
+   * @nullable
+   */
+  referralCode?: string | null;
 }
 
 export type OrderMethodInputPaymentMethod =
@@ -822,6 +833,111 @@ export interface PreTestResult {
   recommendation: string;
 }
 
+export interface RegisterReferralHolderInput {
+  name: string;
+  email: string;
+  password: string;
+  /** Custom referral code chosen by the holder (4-20 alphanumeric, uppercase) */
+  referralCode: string;
+}
+
+export interface ReferralValidationResult {
+  valid: boolean;
+  /** @nullable */
+  holderName?: string | null;
+  /** @nullable */
+  discountPercent?: number | null;
+  /** @nullable */
+  error?: string | null;
+}
+
+export interface ReferralHolderStats {
+  code: string;
+  isActive: boolean;
+  totalReferees: number;
+  totalEarned: number;
+  totalPending: number;
+  totalPaid: number;
+}
+
+export type ReferralRefereeItemStatus =
+  (typeof ReferralRefereeItemStatus)[keyof typeof ReferralRefereeItemStatus];
+
+export const ReferralRefereeItemStatus = {
+  PENDING: "PENDING",
+  PAID: "PAID",
+} as const;
+
+export interface ReferralRefereeItem {
+  commissionId: number;
+  refereeName: string;
+  refereeEmail: string;
+  packageName: string;
+  orderCode: string;
+  paidAmount: number;
+  commissionAmount: number;
+  status: ReferralRefereeItemStatus;
+  /** @nullable */
+  payoutAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdminReferralStats {
+  totalHolders: number;
+  totalReferralOrders: number;
+  totalReferralRevenue: number;
+  totalCommissionPending: number;
+  totalCommissionPaid: number;
+}
+
+export interface ReferralHolderListItem {
+  userId: number;
+  name: string;
+  email: string;
+  code: string;
+  isActive: boolean;
+  totalReferees: number;
+  totalCommission: number;
+  joinedAt: string;
+}
+
+export type CommissionListItemStatus =
+  (typeof CommissionListItemStatus)[keyof typeof CommissionListItemStatus];
+
+export const CommissionListItemStatus = {
+  PENDING: "PENDING",
+  PAID: "PAID",
+} as const;
+
+export interface CommissionListItem {
+  id: number;
+  orderId: number;
+  orderCode: string;
+  holderUserId: number;
+  holderName: string;
+  holderEmail: string;
+  refereeUserId: number;
+  refereeName: string;
+  refereeEmail: string;
+  packageName: string;
+  referralCode: string;
+  paidAmount: number;
+  commissionAmount: number;
+  status: CommissionListItemStatus;
+  /** @nullable */
+  payoutAt?: string | null;
+  /** @nullable */
+  payoutBy?: number | null;
+  /** @nullable */
+  payoutNote?: string | null;
+  createdAt: string;
+}
+
+export interface MarkCommissionPaidInput {
+  /** @nullable */
+  note?: string | null;
+}
+
 export type ListUsersParams = {
   role?: string;
   search?: string;
@@ -863,3 +979,20 @@ export type ListAttemptsParams = {
   quizId?: number;
   tryoutId?: number;
 };
+
+export type ValidateReferralCodeParams = {
+  code: string;
+};
+
+export type ListCommissionsParams = {
+  status?: ListCommissionsStatus;
+  holderId?: number;
+};
+
+export type ListCommissionsStatus =
+  (typeof ListCommissionsStatus)[keyof typeof ListCommissionsStatus];
+
+export const ListCommissionsStatus = {
+  PENDING: "PENDING",
+  PAID: "PAID",
+} as const;

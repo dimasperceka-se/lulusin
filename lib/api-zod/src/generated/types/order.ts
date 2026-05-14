@@ -26,6 +26,11 @@ export interface Order {
   paidAt?: string | null;
   /** @nullable */
   rejectionReason?: string | null;
+  /** @nullable */
+  referralCode?: string | null;
+  /** @nullable */
+  referralHolderId?: number | null;
+  discountAmount?: number;
   createdAt: string;
   /**
    * Raw EMVCo QRIS payload (render to QR client-side). Null if not generated.

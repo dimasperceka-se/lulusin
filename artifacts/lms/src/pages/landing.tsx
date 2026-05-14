@@ -22,6 +22,10 @@ import {
   Zap,
   ShieldCheck,
   Star,
+  Handshake,
+  Wallet,
+  Users,
+  LineChart,
 } from "lucide-react";
 import heroPhoto from "@assets/foto_bertiga-removebg-preview.png";
 import logoUrl from "@assets/logo.png";
@@ -164,6 +168,79 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Referral Program — Prominent Partner CTA */}
+      <section id="referral" className="relative py-16 md:py-20 px-4 overflow-hidden">
+        <div className="absolute top-1/2 -translate-y-1/2 -left-32 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 -translate-y-1/2 -right-32 w-96 h-96 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+        <div className="container mx-auto max-w-6xl relative">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/95 to-accent text-primary-foreground p-8 md:p-14 shadow-lift"
+          >
+            <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-accent/40 blur-3xl pointer-events-none" />
+            <div
+              className="absolute inset-0 opacity-[0.08] pointer-events-none"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(45deg, transparent 0, transparent 18px, rgba(255,255,255,0.5) 18px, rgba(255,255,255,0.5) 19px)",
+              }}
+            />
+
+            <div className="relative grid md:grid-cols-5 gap-8 md:gap-10 items-center">
+              <div className="md:col-span-3 space-y-5">
+                <Badge className="bg-white/20 text-white hover:bg-white/25 border border-white/20 backdrop-blur rounded-full">
+                  <Handshake className="h-3.5 w-3.5 mr-1.5" />
+                  Program Mitra Lulusin
+                </Badge>
+                <h2 className="font-display text-3xl md:text-5xl font-bold leading-[1.05] tracking-tight">
+                  Ajak teman belajar,<br />
+                  <span className="text-white/95">dapatkan komisi 20%</span>
+                </h2>
+                <p className="text-white/85 text-base md:text-lg leading-relaxed max-w-xl">
+                  Bagikan kode referalmu — setiap orang yang daftar lewat kode-mu, kamu dapat komisi 20% dari setiap transaksi. Mereka pun dapat diskon 10%. Cuan dari berbagi ilmu.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Link href="/form-referal">
+                    <Button size="lg" variant="secondary" className="rounded-full shadow-glow text-base font-semibold h-12 px-6 bg-white text-primary hover:bg-white/90">
+                      <Handshake className="mr-2 h-4 w-4" />
+                      Daftar Sebagai Partner
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard-referal-holder">
+                    <Button size="lg" variant="outline" className="rounded-full text-base h-12 px-6 bg-transparent border-white/40 text-white hover:bg-white/10 hover:text-white">
+                      Sudah Jadi Partner? Login
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 p-4 text-center">
+                  <Wallet className="h-6 w-6 mx-auto mb-2 text-white" />
+                  <div className="font-display text-2xl md:text-3xl font-bold">20%</div>
+                  <div className="text-[11px] text-white/80 mt-1 leading-tight">Komisi per transaksi</div>
+                </div>
+                <div className="rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 p-4 text-center">
+                  <Users className="h-6 w-6 mx-auto mb-2 text-white" />
+                  <div className="font-display text-2xl md:text-3xl font-bold">10%</div>
+                  <div className="text-[11px] text-white/80 mt-1 leading-tight">Diskon untuk teman</div>
+                </div>
+                <div className="rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 p-4 text-center">
+                  <LineChart className="h-6 w-6 mx-auto mb-2 text-white" />
+                  <div className="font-display text-base md:text-lg font-bold leading-tight mt-1">Real-time</div>
+                  <div className="text-[11px] text-white/80 mt-1 leading-tight">Dashboard transparan</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 

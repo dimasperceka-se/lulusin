@@ -38,6 +38,8 @@ tags:
     description: Admin dashboard data
   - name: pre-test
     description: Public pre-test (no auth) for landing page lead-gen
+  - name: referral
+    description: Referral program (referral_holder signup, code validation, commissions)
 
 paths:
   /pre-test/questions:
@@ -1448,6 +1450,169 @@ paths:
                 items:
                   $ref: "#/components/schemas/RevenueData"
 
+  # Referral
+  /auth/register-referral-holder:
+    post:
+      operationId: registerReferralHolder
+      tags: [referral]
+      summary: Register a new referral_holder partner with a custom referral code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterReferralHolderInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /referral/validate:
+    get:
+      operationId: validateReferralCode
+      tags: [referral]
+      summary: Validate a referral code (public)
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralValidationResult"
+
+  /referral/me:
+    get:
+      operationId: getMyReferralStats
+      tags: [referral]
+      summary: Get current referral_holder dashboard stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralHolderStats"
+
+  /referral/me/referees:
+    get:
+      operationId: getMyReferees
+      tags: [referral]
+      summary: List all referees and their commissions for current referral_holder
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Referee list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferralRefereeItem"
+
+  /admin/referral/stats:
+    get:
+      operationId: getAdminReferralStats
+      tags: [referral]
+      summary: Admin overview of referral program
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin referral stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReferralStats"
+
+  /admin/referral/holders:
+    get:
+      operationId: listReferralHolders
+      tags: [referral]
+      summary: Admin list of referral_holders with aggregated stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Holders list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReferralHolderListItem"
+
+  /admin/referral/commissions:
+    get:
+      operationId: listCommissions
+      tags: [referral]
+      summary: Admin list of commission records, filterable by status/holder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, PAID]
+        - name: holderId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Commissions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommissionListItem"
+
+  /admin/referral/commissions/{id}/mark-paid:
+    post:
+      operationId: markCommissionPaid
+      tags: [referral]
+      summary: Mark a commission as paid out (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkCommissionPaidInput"
+      responses:
+        "200":
+          description: Updated commission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommissionListItem"
+
   # Student dashboard
   /student/dashboard:
     get:
@@ -1644,7 +1809,7 @@ components:
           type: ["string", "null"]
         role:
           type: string
-          enum: [admin, tutor, student]
+          enum: [admin, tutor, student, referral_holder]
         avatar:
           type: ["string", "null"]
         targetInstitution:
@@ -1862,6 +2027,12 @@ components:
           type: ["string", "null"]
         rejectionReason:
           type: ["string", "null"]
+        referralCode:
+          type: ["string", "null"]
+        referralHolderId:
+          type: ["integer", "null"]
+        discountAmount:
+          type: integer
         createdAt:
           type: string
         qrisContent:
@@ -1889,6 +2060,9 @@ components:
         paymentMethod:
           type: string
           enum: [BANK_TRANSFER, QRIS]
+        referralCode:
+          type: ["string", "null"]
+          description: Optional referral code applied to this order; triggers 10% discount if valid.
 
     OrderMethodInput:
       type: object
@@ -2603,3 +2777,157 @@ components:
           type: number
         recommendation:
           type: string
+
+    RegisterReferralHolderInput:
+      type: object
+      required: [name, email, password, referralCode]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        referralCode:
+          type: string
+          description: Custom referral code chosen by the holder (4-20 alphanumeric, uppercase)
+
+    ReferralValidationResult:
+      type: object
+      required: [valid]
+      properties:
+        valid:
+          type: boolean
+        holderName:
+          type: ["string", "null"]
+        discountPercent:
+          type: ["integer", "null"]
+        error:
+          type: ["string", "null"]
+
+    ReferralHolderStats:
+      type: object
+      required: [code, isActive, totalReferees, totalEarned, totalPending, totalPaid]
+      properties:
+        code:
+          type: string
+        isActive:
+          type: boolean
+        totalReferees:
+          type: integer
+        totalEarned:
+          type: integer
+        totalPending:
+          type: integer
+        totalPaid:
+          type: integer
+
+    ReferralRefereeItem:
+      type: object
+      required: [commissionId, refereeName, refereeEmail, packageName, orderCode, paidAmount, commissionAmount, status, createdAt]
+      properties:
+        commissionId:
+          type: integer
+        refereeName:
+          type: string
+        refereeEmail:
+          type: string
+        packageName:
+          type: string
+        orderCode:
+          type: string
+        paidAmount:
+          type: integer
+        commissionAmount:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, PAID]
+        payoutAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    AdminReferralStats:
+      type: object
+      required: [totalHolders, totalReferralOrders, totalReferralRevenue, totalCommissionPending, totalCommissionPaid]
+      properties:
+        totalHolders:
+          type: integer
+        totalReferralOrders:
+          type: integer
+        totalReferralRevenue:
+          type: integer
+        totalCommissionPending:
+          type: integer
+        totalCommissionPaid:
+          type: integer
+
+    ReferralHolderListItem:
+      type: object
+      required: [userId, name, email, code, isActive, totalReferees, totalCommission, joinedAt]
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        code:
+          type: string
+        isActive:
+          type: boolean
+        totalReferees:
+          type: integer
+        totalCommission:
+          type: integer
+        joinedAt:
+          type: string
+
+    CommissionListItem:
+      type: object
+      required: [id, orderId, orderCode, holderUserId, holderName, holderEmail, refereeUserId, refereeName, refereeEmail, packageName, referralCode, paidAmount, commissionAmount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        orderCode:
+          type: string
+        holderUserId:
+          type: integer
+        holderName:
+          type: string
+        holderEmail:
+          type: string
+        refereeUserId:
+          type: integer
+        refereeName:
+          type: string
+        refereeEmail:
+          type: string
+        packageName:
+          type: string
+        referralCode:
+          type: string
+        paidAmount:
+          type: integer
+        commissionAmount:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, PAID]
+        payoutAt:
+          type: ["string", "null"]
+        payoutBy:
+          type: ["integer", "null"]
+        payoutNote:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    MarkCommissionPaidInput:
+      type: object
+      properties:
+        note:
+          type: ["string", "null"]

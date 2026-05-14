@@ -31,7 +31,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   ];
 
   const adminLinks = [
-    { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard-admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/orders", label: "Verifikasi Pembayaran", icon: CreditCard },
     { href: "/admin/packages", label: "Kelola Paket", icon: BookOpen },
     { href: "/admin/questions", label: "Bank Soal", icon: FileQuestion },
@@ -41,7 +41,16 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     { href: "/admin/payment-settings", label: "Pembayaran", icon: Wallet },
   ];
 
-  const links = user?.role === "admin" ? adminLinks : studentLinks;
+  const referralHolderLinks = [
+    { href: "/dashboard-referal-holder", label: "Dashboard Partner", icon: LayoutDashboard },
+    { href: "/profile", label: "Profil", icon: Settings },
+  ];
+
+  const links = user?.role === "admin"
+    ? adminLinks
+    : user?.role === "referral_holder"
+      ? referralHolderLinks
+      : studentLinks;
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,7 +66,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               const Icon = link.icon;
               const isActive =
                 location === link.href ||
-                (link.href !== "/admin" && location.startsWith(`${link.href}/`));
+                (link.href !== "/admin" && link.href !== "/dashboard-admin" && location.startsWith(`${link.href}/`));
               return (
                 <Link key={link.href} href={link.href}>
                   <span

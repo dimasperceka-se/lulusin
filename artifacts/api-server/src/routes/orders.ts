@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { db, ordersTable, enrollmentsTable, packagesTable, bankAccountsTable } from "@workspace/db";
+import { db, ordersTable, enrollmentsTable, packagesTable, bankAccountsTable, referralCodesTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { CreateOrderBody, UploadPaymentProofBody, VerifyOrderBody, ListOrdersQueryParams, UpdateOrderMethodBody } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
+import { calcDiscount, createCommissionIfMissing } from "../lib/referral";
 
 const router = Router();
 
@@ -126,6 +127,8 @@ export async function markOrderPaid(orderId: number, paidAt?: Date): Promise<voi
   }).onConflictDoNothing();
 
   logger.info({ orderId, userId: current.userId }, "Order auto-marked PAID, enrollment created");
+
+  await createCommissionIfMissing(current);
 }
 
 router.get("/orders", authenticate, async (req, res): Promise<void> => {
@@ -174,6 +177,30 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
     return;
   }
 
+  let resolvedReferralCode: string | null = null;
+  let resolvedReferralHolderId: number | null = null;
+  let discountAmount = 0;
+  let finalAmount = pkg.price;
+
+  const inputCode = parsed.data.referralCode?.trim().toUpperCase();
+  if (inputCode) {
+    const [rc] = await db.select().from(referralCodesTable).where(
+      and(eq(referralCodesTable.code, inputCode), eq(referralCodesTable.isActive, true))
+    );
+    if (!rc) {
+      res.status(400).json({ error: "Kode referal tidak valid." });
+      return;
+    }
+    if (rc.holderUserId === req.user!.userId) {
+      res.status(400).json({ error: "Tidak bisa memakai kode referal sendiri." });
+      return;
+    }
+    resolvedReferralCode = rc.code;
+    resolvedReferralHolderId = rc.holderUserId;
+    discountAmount = calcDiscount(pkg.price);
+    finalAmount = pkg.price - discountAmount;
+  }
+
   const expiredAt = new Date();
   expiredAt.setHours(expiredAt.getHours() + 24);
 
@@ -184,7 +211,7 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
   let qrisFields: Partial<QrisGenerated> = {};
   if (paymentMethod === "QRIS") {
     try {
-      qrisFields = await generateQris(orderCode, pkg.price + uniqueAmount);
+      qrisFields = await generateQris(orderCode, finalAmount + uniqueAmount);
     } catch (e) {
       logger.error({ err: e }, "Failed to generate QRIS at order creation");
       res.status(503).json({ error: "QRIS provider unavailable. Pilih Transfer Bank atau coba lagi." });
@@ -196,11 +223,14 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
     userId: req.user!.userId,
     packageId: parsed.data.packageId,
     orderCode,
-    amount: pkg.price,
+    amount: finalAmount,
     uniqueAmount,
     paymentMethod,
     status: "PENDING",
     expiredAt,
+    referralCode: resolvedReferralCode,
+    referralHolderId: resolvedReferralHolderId,
+    discountAmount,
     ...qrisFields,
   }).returning();
 
@@ -338,6 +368,8 @@ router.post("/orders/:id/verify", authenticate, requireRole("admin"), async (req
     }).onConflictDoNothing();
 
     logger.info({ orderId: id, userId: order.userId }, "Order approved, enrollment created");
+
+    await createCommissionIfMissing(updated);
 
     res.json(await enrichOrder(updated));
   } else {

@@ -93,7 +93,7 @@ export const LoginResponse = zod.object({
     name: zod.string(),
     email: zod.string(),
     phone: zod.string().nullish(),
-    role: zod.enum(["admin", "tutor", "student"]),
+    role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
     avatar: zod.string().nullish(),
     targetInstitution: zod.string().nullish(),
     isEmailVerified: zod.boolean(),
@@ -115,7 +115,7 @@ export const GetMeResponse = zod.object({
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
-  role: zod.enum(["admin", "tutor", "student"]),
+  role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
   isEmailVerified: zod.boolean(),
@@ -137,7 +137,7 @@ export const UpdateProfileResponse = zod.object({
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
-  role: zod.enum(["admin", "tutor", "student"]),
+  role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
   isEmailVerified: zod.boolean(),
@@ -156,7 +156,7 @@ export const VerifyEmailResponse = zod.object({
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
-  role: zod.enum(["admin", "tutor", "student"]),
+  role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
   isEmailVerified: zod.boolean(),
@@ -202,7 +202,7 @@ export const ResetPasswordResponse = zod.object({
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
-  role: zod.enum(["admin", "tutor", "student"]),
+  role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
   isEmailVerified: zod.boolean(),
@@ -226,7 +226,7 @@ export const ListUsersResponse = zod.object({
       name: zod.string(),
       email: zod.string(),
       phone: zod.string().nullish(),
-      role: zod.enum(["admin", "tutor", "student"]),
+      role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
       avatar: zod.string().nullish(),
       targetInstitution: zod.string().nullish(),
       isEmailVerified: zod.boolean(),
@@ -250,7 +250,7 @@ export const GetUserResponse = zod.object({
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
-  role: zod.enum(["admin", "tutor", "student"]),
+  role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
   isEmailVerified: zod.boolean(),
@@ -276,7 +276,7 @@ export const UpdateUserResponse = zod.object({
   name: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
-  role: zod.enum(["admin", "tutor", "student"]),
+  role: zod.enum(["admin", "tutor", "student", "referral_holder"]),
   avatar: zod.string().nullish(),
   targetInstitution: zod.string().nullish(),
   isEmailVerified: zod.boolean(),
@@ -523,6 +523,9 @@ export const ListOrdersResponse = zod.object({
       expiredAt: zod.string(),
       paidAt: zod.string().nullish(),
       rejectionReason: zod.string().nullish(),
+      referralCode: zod.string().nullish(),
+      referralHolderId: zod.number().nullish(),
+      discountAmount: zod.number().optional(),
       createdAt: zod.string(),
       qrisContent: zod
         .string()
@@ -578,6 +581,12 @@ export const ListOrdersResponse = zod.object({
 export const CreateOrderBody = zod.object({
   packageId: zod.number(),
   paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]).optional(),
+  referralCode: zod
+    .string()
+    .nullish()
+    .describe(
+      "Optional referral code applied to this order; triggers 10% discount if valid.",
+    ),
 });
 
 /**
@@ -606,6 +615,9 @@ export const GetOrderResponse = zod.object({
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
+  referralHolderId: zod.number().nullish(),
+  discountAmount: zod.number().optional(),
   createdAt: zod.string(),
   qrisContent: zod
     .string()
@@ -678,6 +690,9 @@ export const UploadPaymentProofResponse = zod.object({
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
+  referralHolderId: zod.number().nullish(),
+  discountAmount: zod.number().optional(),
   createdAt: zod.string(),
   qrisContent: zod
     .string()
@@ -751,6 +766,9 @@ export const VerifyOrderResponse = zod.object({
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
+  referralHolderId: zod.number().nullish(),
+  discountAmount: zod.number().optional(),
   createdAt: zod.string(),
   qrisContent: zod
     .string()
@@ -830,6 +848,9 @@ export const UpdateOrderMethodResponse = zod.object({
   expiredAt: zod.string(),
   paidAt: zod.string().nullish(),
   rejectionReason: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
+  referralHolderId: zod.number().nullish(),
+  discountAmount: zod.number().optional(),
   createdAt: zod.string(),
   qrisContent: zod
     .string()
@@ -1558,6 +1579,153 @@ export const GetRevenueChartResponseItem = zod.object({
   orders: zod.number(),
 });
 export const GetRevenueChartResponse = zod.array(GetRevenueChartResponseItem);
+
+/**
+ * @summary Register a new referral_holder partner with a custom referral code
+ */
+export const RegisterReferralHolderBody = zod.object({
+  name: zod.string(),
+  email: zod.string(),
+  password: zod.string(),
+  referralCode: zod
+    .string()
+    .describe(
+      "Custom referral code chosen by the holder (4-20 alphanumeric, uppercase)",
+    ),
+});
+
+/**
+ * @summary Validate a referral code (public)
+ */
+export const ValidateReferralCodeQueryParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const ValidateReferralCodeResponse = zod.object({
+  valid: zod.boolean(),
+  holderName: zod.string().nullish(),
+  discountPercent: zod.number().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary Get current referral_holder dashboard stats
+ */
+export const GetMyReferralStatsResponse = zod.object({
+  code: zod.string(),
+  isActive: zod.boolean(),
+  totalReferees: zod.number(),
+  totalEarned: zod.number(),
+  totalPending: zod.number(),
+  totalPaid: zod.number(),
+});
+
+/**
+ * @summary List all referees and their commissions for current referral_holder
+ */
+export const GetMyRefereesResponseItem = zod.object({
+  commissionId: zod.number(),
+  refereeName: zod.string(),
+  refereeEmail: zod.string(),
+  packageName: zod.string(),
+  orderCode: zod.string(),
+  paidAmount: zod.number(),
+  commissionAmount: zod.number(),
+  status: zod.enum(["PENDING", "PAID"]),
+  payoutAt: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetMyRefereesResponse = zod.array(GetMyRefereesResponseItem);
+
+/**
+ * @summary Admin overview of referral program
+ */
+export const GetAdminReferralStatsResponse = zod.object({
+  totalHolders: zod.number(),
+  totalReferralOrders: zod.number(),
+  totalReferralRevenue: zod.number(),
+  totalCommissionPending: zod.number(),
+  totalCommissionPaid: zod.number(),
+});
+
+/**
+ * @summary Admin list of referral_holders with aggregated stats
+ */
+export const ListReferralHoldersResponseItem = zod.object({
+  userId: zod.number(),
+  name: zod.string(),
+  email: zod.string(),
+  code: zod.string(),
+  isActive: zod.boolean(),
+  totalReferees: zod.number(),
+  totalCommission: zod.number(),
+  joinedAt: zod.string(),
+});
+export const ListReferralHoldersResponse = zod.array(
+  ListReferralHoldersResponseItem,
+);
+
+/**
+ * @summary Admin list of commission records, filterable by status/holder
+ */
+export const ListCommissionsQueryParams = zod.object({
+  status: zod.enum(["PENDING", "PAID"]).optional(),
+  holderId: zod.coerce.number().optional(),
+});
+
+export const ListCommissionsResponseItem = zod.object({
+  id: zod.number(),
+  orderId: zod.number(),
+  orderCode: zod.string(),
+  holderUserId: zod.number(),
+  holderName: zod.string(),
+  holderEmail: zod.string(),
+  refereeUserId: zod.number(),
+  refereeName: zod.string(),
+  refereeEmail: zod.string(),
+  packageName: zod.string(),
+  referralCode: zod.string(),
+  paidAmount: zod.number(),
+  commissionAmount: zod.number(),
+  status: zod.enum(["PENDING", "PAID"]),
+  payoutAt: zod.string().nullish(),
+  payoutBy: zod.number().nullish(),
+  payoutNote: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const ListCommissionsResponse = zod.array(ListCommissionsResponseItem);
+
+/**
+ * @summary Mark a commission as paid out (admin)
+ */
+export const MarkCommissionPaidParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkCommissionPaidBody = zod.object({
+  note: zod.string().nullish(),
+});
+
+export const MarkCommissionPaidResponse = zod.object({
+  id: zod.number(),
+  orderId: zod.number(),
+  orderCode: zod.string(),
+  holderUserId: zod.number(),
+  holderName: zod.string(),
+  holderEmail: zod.string(),
+  refereeUserId: zod.number(),
+  refereeName: zod.string(),
+  refereeEmail: zod.string(),
+  packageName: zod.string(),
+  referralCode: zod.string(),
+  paidAmount: zod.number(),
+  commissionAmount: zod.number(),
+  status: zod.enum(["PENDING", "PAID"]),
+  payoutAt: zod.string().nullish(),
+  payoutBy: zod.number().nullish(),
+  payoutNote: zod.string().nullish(),
+  createdAt: zod.string(),
+});
 
 /**
  * @summary Get student dashboard overview

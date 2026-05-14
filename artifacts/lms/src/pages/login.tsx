@@ -46,7 +46,12 @@ export default function Login() {
           title: "Login berhasil",
           description: "Selamat datang kembali!",
         });
-        setLocation(data.user.role === 'admin' ? '/admin' : '/dashboard');
+        const dest = data.user.role === 'admin'
+          ? '/dashboard-admin'
+          : data.user.role === 'referral_holder'
+            ? '/dashboard-referal-holder'
+            : '/dashboard';
+        setLocation(dest);
       },
       onError: (error) => {
         toast({

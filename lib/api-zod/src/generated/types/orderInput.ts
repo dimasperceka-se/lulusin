@@ -10,4 +10,9 @@ import type { OrderInputPaymentMethod } from "./orderInputPaymentMethod";
 export interface OrderInput {
   packageId: number;
   paymentMethod?: OrderInputPaymentMethod;
+  /**
+   * Optional referral code applied to this order; triggers 10% discount if valid.
+   * @nullable
+   */
+  referralCode?: string | null;
 }

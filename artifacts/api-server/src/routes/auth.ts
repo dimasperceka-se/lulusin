@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { db, usersTable, type User } from "@workspace/db";
+import { db, usersTable, referralCodesTable, type User } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { authenticate, generateToken } from "../middlewares/auth";
 import {
@@ -12,6 +12,7 @@ import {
   ResendVerificationBody,
   ForgotPasswordBody,
   ResetPasswordBody,
+  RegisterReferralHolderBody,
 } from "@workspace/api-zod";
 
 const router = Router();
@@ -74,6 +75,56 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     user: publicUser(user),
     verificationToken,
   });
+});
+
+router.post("/auth/register-referral-holder", async (req, res): Promise<void> => {
+  const parsed = RegisterReferralHolderBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { name, email, password } = parsed.data;
+  const referralCode = parsed.data.referralCode.trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{4,20}$/.test(referralCode)) {
+    res.status(400).json({ error: "Kode referal harus 4-20 karakter alfanumerik (A-Z, 0-9)." });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ error: "Password minimal 6 karakter." });
+    return;
+  }
+
+  const existingEmail = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (existingEmail.length > 0) {
+    res.status(400).json({ error: "Email sudah terdaftar." });
+    return;
+  }
+
+  const existingCode = await db.select().from(referralCodesTable).where(eq(referralCodesTable.code, referralCode));
+  if (existingCode.length > 0) {
+    res.status(400).json({ error: "Kode referal sudah dipakai. Pilih kode lain." });
+    return;
+  }
+
+  const hashed = await bcrypt.hash(password, 12);
+  const [user] = await db.insert(usersTable).values({
+    name,
+    email,
+    password: hashed,
+    role: "referral_holder",
+    isEmailVerified: true,
+  }).returning();
+
+  await db.insert(referralCodesTable).values({
+    holderUserId: user.id,
+    code: referralCode,
+    isActive: true,
+  });
+
+  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
+  res.status(201).json({ token, user: publicUser(user) });
 });
 
 router.post("/auth/login", async (req, res): Promise<void> => {

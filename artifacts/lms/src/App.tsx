@@ -41,6 +41,11 @@ import AdminQuizzes from "@/pages/admin-quizzes";
 import AdminUsers from "@/pages/admin-users";
 import AdminBankAccounts from "@/pages/admin-bank-accounts";
 import AdminPaymentSettings from "@/pages/admin-payment-settings";
+import DashboardAdmin from "@/pages/dashboard-admin";
+
+// Referral
+import FormReferal from "@/pages/form-referal";
+import DashboardReferalHolder from "@/pages/dashboard-referal-holder";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,9 +56,15 @@ const queryClient = new QueryClient({
   }
 });
 
-function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: any) {
+function roleHome(role: string | undefined): string {
+  if (role === 'admin') return '/dashboard-admin';
+  if (role === 'referral_holder') return '/dashboard-referal-holder';
+  return '/dashboard';
+}
+
+function ProtectedRoute({ component: Component, adminOnly = false, holderOnly = false, ...rest }: any) {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -63,7 +74,11 @@ function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: an
   }
 
   if (adminOnly && user.role !== 'admin') {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to={roleHome(user.role)} />;
+  }
+
+  if (holderOnly && user.role !== 'referral_holder') {
+    return <Redirect to={roleHome(user.role)} />;
   }
 
   return <Component {...rest} />;
@@ -71,13 +86,13 @@ function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: an
 
 function GuestRoute({ component: Component, ...rest }: any) {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <PageLoader />;
   }
 
   if (user) {
-    return <Redirect to={user.role === 'admin' ? '/admin' : '/dashboard'} />;
+    return <Redirect to={roleHome(user.role)} />;
   }
 
   return <Component {...rest} />;
@@ -90,6 +105,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login">{(params) => <GuestRoute component={Login} {...params} />}</Route>
       <Route path="/register">{(params) => <GuestRoute component={Register} {...params} />}</Route>
+      <Route path="/form-referal">{(params) => <GuestRoute component={FormReferal} {...params} />}</Route>
       <Route path="/packages" component={Packages} />
       <Route path="/packages/:id" component={PackageDetail} />
       <Route path="/verify-email" component={VerifyEmail} />
@@ -113,7 +129,11 @@ function Router() {
       <Route path="/orders">{(params) => <ProtectedRoute component={StudentOrders} {...params} />}</Route>
       <Route path="/orders/:id">{(params) => <ProtectedRoute component={OrderDetail} {...params} />}</Route>
       
+      {/* Referral Holder */}
+      <Route path="/dashboard-referal-holder">{(params) => <ProtectedRoute component={DashboardReferalHolder} holderOnly {...params} />}</Route>
+
       {/* Admin Area */}
+      <Route path="/dashboard-admin">{(params) => <ProtectedRoute component={DashboardAdmin} adminOnly {...params} />}</Route>
       <Route path="/admin">{(params) => <ProtectedRoute component={AdminDashboard} adminOnly {...params} />}</Route>
       <Route path="/admin/orders">{(params) => <ProtectedRoute component={AdminOrders} adminOnly {...params} />}</Route>
       <Route path="/admin/packages">{(params) => <ProtectedRoute component={AdminPackages} adminOnly {...params} />}</Route>
