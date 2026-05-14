@@ -32,7 +32,7 @@ import {
 import heroPhoto from "@assets/foto_bertiga-removebg-preview.png";
 import logoUrl from "@assets/logo.png";
 import pnsAlumni from "@assets/pns_1.png";
-import jondesCard from "@assets/testimoni/jondes_1.png";
+import jondesCard from "@assets/testimoni/jondes_3.png";
 import telaCard from "@assets/testimoni/tela_1.png";
 import enongCard from "@assets/testimoni/enong_1.png";
 
