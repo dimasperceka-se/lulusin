@@ -733,7 +733,7 @@ export default function Landing() {
                         <img
                           src={t.photo}
                           alt={t.name}
-                          className="relative h-14 w-14 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
+                          className="relative h-14 w-14 rounded-full object-cover object-top ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
                         />
                       </div>
                       <div className="min-w-0">
