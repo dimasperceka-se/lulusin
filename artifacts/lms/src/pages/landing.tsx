@@ -26,10 +26,13 @@ import {
   Wallet,
   Users,
   LineChart,
+  Gift,
+  Quote,
 } from "lucide-react";
 import heroPhoto from "@assets/foto_bertiga-removebg-preview.png";
 import logoUrl from "@assets/logo.png";
 import pnsAlumni from "@assets/pns_1.png";
+import jondesPhoto from "@assets/testimoni/jondes.png";
 import { RobotMascot } from "@/components/robot-mascot";
 import { FlowingRibbons } from "@/components/background-decorations";
 import { motion } from "framer-motion";
@@ -473,6 +476,37 @@ export default function Landing() {
             </p>
           </div>
 
+          {/* CPNS HOTS Bonus Callout */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-10 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-4 shadow-soft"
+          >
+            <div className="flex-shrink-0 grid place-items-center h-12 w-12 rounded-xl bg-primary/15 text-primary">
+              <Gift className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className="bg-primary/15 text-primary hover:bg-primary/20 border border-primary/25 text-[10px]">BONUS EKSKLUSIF</Badge>
+                <span className="text-xs text-muted-foreground hidden sm:inline">Khusus paket CPNS</span>
+              </div>
+              <h3 className="font-semibold text-base md:text-lg leading-snug">
+                Subscribe Paket CPNS → akses 3 Tryout HOTS (2023, 2024, 2026) — 330 soal premium SKD
+              </h3>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                Plus Grand Tryout SKD #1 dan Tryout Nasional Mei 2026. Total 5 simulasi CBT 100 menit per tryout.
+              </p>
+            </div>
+            <Link href="/packages?category=CPNS">
+              <Button size="sm" variant="default" className="rounded-full whitespace-nowrap shadow-glow">
+                Lihat Paket CPNS
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </motion.div>
+
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
             <div className="flex flex-wrap gap-2">
               {categories.map((cat) => (
@@ -585,6 +619,80 @@ export default function Landing() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Testimoni */}
+      <section id="testimoni" className="relative py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-mesh opacity-50 pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+        <div className="relative container mx-auto max-w-4xl">
+          <div className="text-center mb-12">
+            <Badge variant="secondary" className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-primary">
+              <Quote className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Testimoni</span>
+            </Badge>
+            <h2 className="font-display text-3xl md:text-5xl font-extrabold tracking-tight mb-3">
+              Cerita dari mereka yang <span className="text-gradient">sudah lulus</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Bukan iklan — pengalaman langsung pengguna Lulusin.
+            </p>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <Card className="relative overflow-hidden shadow-lift border-card-border">
+              <div className="absolute -top-8 -right-6 text-primary/10 pointer-events-none">
+                <Quote className="h-44 w-44" />
+              </div>
+
+              <CardContent className="relative p-8 md:p-12">
+                <div className="flex items-center gap-1 mb-5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+
+                <blockquote className="text-lg md:text-xl leading-relaxed text-foreground/90 font-medium mb-8">
+                  <span className="text-primary font-display text-2xl mr-1 align-[-0.15em]">&ldquo;</span>
+                  Setelah mencoba mengerjakan TO di apps Lulusin, menurut saya Sistem Try Out (TO) di Lulusin
+                  didesain sangat mirip dengan sistem CAT (Computer Assisted Test) asli. Pengalaman mengerjakan
+                  dengan batasan waktu yang ketat sangat membantu dalam melatih{" "}
+                  <span className="text-primary font-semibold">time management</span> dan mentalitas saat
+                  menghadapi ujian sesungguhnya. Tidak cuma itu, adanya statistik nilai dan grafik perkembangan
+                  performa memungkinkan kita yang mengerjakan untuk melakukan{" "}
+                  <span className="text-primary font-semibold">evaluasi diri secara objektif</span>, pokoknya
+                  aplikasi ini is the best.
+                  <span className="text-primary font-display text-2xl ml-1 align-[-0.15em]">&rdquo;</span>
+                </blockquote>
+
+                <div className="flex items-center gap-4 pt-6 border-t border-border">
+                  <div className="relative shrink-0">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-md" />
+                    <img
+                      src={jondesPhoto}
+                      alt="Jonathan de Santo"
+                      className="relative h-16 w-16 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display font-bold text-base md:text-lg leading-tight">
+                      Jonathan de Santo S.P, M Agr
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                      PNS Pengendali Dampak Lingkungan
+                      <span className="hidden sm:inline"> · </span>
+                      <span className="block sm:inline text-primary/80 font-medium">KLH / BPLH</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </section>
 
