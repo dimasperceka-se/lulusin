@@ -80,7 +80,7 @@ export default function StudentDashboard() {
               </span>
             </CardHeader>
             <CardContent>
-              <div className="font-display text-3xl font-bold">{dashboard?.latestTryoutScore !== null ? dashboard?.latestTryoutScore : '-'}</div>
+              <div className="font-display text-3xl font-bold">{typeof dashboard?.latestTryoutScore === 'number' ? dashboard.latestTryoutScore.toFixed(2) : '-'}</div>
               <p className="text-xs text-muted-foreground mt-1">Skor tertinggi</p>
             </CardContent>
           </Card>

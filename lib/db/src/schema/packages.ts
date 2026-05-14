@@ -12,6 +12,7 @@ export const packagesTable = pgTable("packages", {
   thumbnail: text("thumbnail"),
   isActive: boolean("is_active").notNull().default(true),
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

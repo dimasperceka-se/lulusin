@@ -13,6 +13,7 @@
     "import-hots-2026": "tsx --env-file=../artifacts/api-server/.env ./src/import-hots-2026.ts",
     "import-hots-2024": "tsx --env-file=../artifacts/api-server/.env ./src/import-hots-2024.ts",
     "import-hots-2023": "tsx --env-file=../artifacts/api-server/.env ./src/import-hots-2023.ts",
+    "feature-cpns-lengkap": "tsx --env-file=../artifacts/api-server/.env ./src/feature-cpns-lengkap.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, packagesTable, materialsTable, quizzesTable, tryoutsTable } from "@workspace/db";
-import { eq, sql, ilike, and, isNull } from "drizzle-orm";
+import { eq, sql, ilike, and, isNull, desc, asc } from "drizzle-orm";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { CreatePackageBody, UpdatePackageBody, ListPackagesQueryParams } from "@workspace/api-zod";
 
@@ -27,7 +27,9 @@ router.get("/packages", async (req, res): Promise<void> => {
     materialCount: sql<number>`(SELECT count(*) FROM materials WHERE package_id = ${packagesTable.id})`,
     quizCount: sql<number>`(SELECT count(*) FROM quizzes WHERE package_id = ${packagesTable.id})`,
     tryoutCount: sql<number>`(SELECT count(*) FROM tryouts WHERE package_id = ${packagesTable.id})`,
-  }).from(packagesTable).where(conditions.length > 0 ? and(...conditions) : undefined);
+  }).from(packagesTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(packagesTable.sortOrder), asc(packagesTable.id));
 
   const filtered = query.search
     ? rows.filter(p => p.name.toLowerCase().includes((query.search as string).toLowerCase()))
