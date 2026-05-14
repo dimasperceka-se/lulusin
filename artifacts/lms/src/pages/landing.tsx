@@ -33,6 +33,64 @@ import heroPhoto from "@assets/foto_bertiga-removebg-preview.png";
 import logoUrl from "@assets/logo.png";
 import pnsAlumni from "@assets/pns_1.png";
 import jondesPhoto from "@assets/testimoni/jondes.png";
+import telaPhoto from "@assets/testimoni/tela.png";
+
+type Testimoni = {
+  name: string;
+  role: string;
+  org: string;
+  photo: string;
+  quote: React.ReactNode[];
+};
+
+const TESTIMONIES: Testimoni[] = [
+  {
+    name: "Jonathan de Santo S.P, M Agr",
+    role: "PNS Pengendali Dampak Lingkungan",
+    org: "KLH / BPLH",
+    photo: jondesPhoto,
+    quote: [
+      <>
+        Setelah mencoba mengerjakan TO di apps Lulusin, menurut saya Sistem Try Out (TO) di Lulusin
+        didesain sangat mirip dengan sistem CAT (Computer Assisted Test) asli. Pengalaman mengerjakan
+        dengan batasan waktu yang ketat sangat membantu dalam melatih{" "}
+        <span className="text-primary font-semibold">time management</span> dan mentalitas saat
+        menghadapi ujian sesungguhnya. Tidak cuma itu, adanya statistik nilai dan grafik perkembangan
+        performa memungkinkan kita yang mengerjakan untuk melakukan{" "}
+        <span className="text-primary font-semibold">evaluasi diri secara objektif</span>, pokoknya
+        aplikasi ini is the best.
+      </>,
+    ],
+  },
+  {
+    name: "Tiara Wulan S.P., M.P",
+    role: "Penelaah Teknis Kebijakan",
+    org: "Dinas Tanaman Pangan & Hortikultura Prov. Jawa Barat",
+    photo: telaPhoto,
+    quote: [
+      <>
+        Dulu saya sempat bingung cari media belajar yang benar-benar bisa bikin terbiasa menghadapi
+        tes CPNS. Setelah pakai aplikasi ini beberapa bulan, ternyata pengaruhnya besar banget buat
+        persiapan saya. Soal-soalnya variatif dan{" "}
+        <span className="text-primary font-semibold">suasana try out-nya terasa realistis</span>,
+        jadi waktu ujian asli saya tidak terlalu kaget ataupun panik.
+      </>,
+      <>
+        Yang paling saya suka adalah fitur perkembangan skor try out-nya. Dari grafik hasil beberapa
+        try out terakhir, saya bisa{" "}
+        <span className="text-primary font-semibold">melihat peningkatan nilai secara bertahap</span>{" "}
+        dan jadi lebih semangat belajar. Fitur ini membantu banget untuk evaluasi kemampuan diri dan
+        memotivasi supaya hasil berikutnya lebih bagus lagi.
+      </>,
+      <>
+        Selama rutin latihan di aplikasi ini, saya merasa kemampuan dan kepercayaan diri saya
+        meningkat jauh dibanding sebelumnya. Alhamdulillah, usaha latihan yang konsisten akhirnya
+        membuahkan hasil sampai saya{" "}
+        <span className="text-primary font-semibold">berhasil lolos CPNS</span>.
+      </>,
+    ],
+  },
+];
 import { RobotMascot } from "@/components/robot-mascot";
 import { FlowingRibbons } from "@/components/background-decorations";
 import { motion } from "framer-motion";
@@ -625,7 +683,7 @@ export default function Landing() {
       {/* Testimoni */}
       <section id="testimoni" className="relative py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-mesh opacity-50 pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
-        <div className="relative container mx-auto max-w-4xl">
+        <div className="relative container mx-auto max-w-6xl">
           <div className="text-center mb-12">
             <Badge variant="secondary" className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-primary">
               <Quote className="h-3.5 w-3.5" />
@@ -639,60 +697,61 @@ export default function Landing() {
             </p>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            <Card className="relative overflow-hidden shadow-lift border-card-border">
-              <div className="absolute -top-8 -right-6 text-primary/10 pointer-events-none">
-                <Quote className="h-44 w-44" />
-              </div>
-
-              <CardContent className="relative p-8 md:p-12">
-                <div className="flex items-center gap-1 mb-5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-
-                <blockquote className="text-lg md:text-xl leading-relaxed text-foreground/90 font-medium mb-8">
-                  <span className="text-primary font-display text-2xl mr-1 align-[-0.15em]">&ldquo;</span>
-                  Setelah mencoba mengerjakan TO di apps Lulusin, menurut saya Sistem Try Out (TO) di Lulusin
-                  didesain sangat mirip dengan sistem CAT (Computer Assisted Test) asli. Pengalaman mengerjakan
-                  dengan batasan waktu yang ketat sangat membantu dalam melatih{" "}
-                  <span className="text-primary font-semibold">time management</span> dan mentalitas saat
-                  menghadapi ujian sesungguhnya. Tidak cuma itu, adanya statistik nilai dan grafik perkembangan
-                  performa memungkinkan kita yang mengerjakan untuk melakukan{" "}
-                  <span className="text-primary font-semibold">evaluasi diri secara objektif</span>, pokoknya
-                  aplikasi ini is the best.
-                  <span className="text-primary font-display text-2xl ml-1 align-[-0.15em]">&rdquo;</span>
-                </blockquote>
-
-                <div className="flex items-center gap-4 pt-6 border-t border-border">
-                  <div className="relative shrink-0">
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-md" />
-                    <img
-                      src={jondesPhoto}
-                      alt="Jonathan de Santo"
-                      className="relative h-16 w-16 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
-                    />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
+            {TESTIMONIES.map((t, idx) => (
+              <motion.div
+                key={t.name}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.5, ease: "easeOut", delay: idx * 0.1 }}
+                className="h-full"
+              >
+                <Card className="relative h-full overflow-hidden shadow-lift border-card-border">
+                  <div className="absolute -top-8 -right-6 text-primary/10 pointer-events-none">
+                    <Quote className="h-40 w-40" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-display font-bold text-base md:text-lg leading-tight">
-                      Jonathan de Santo S.P, M Agr
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1 leading-snug">
-                      PNS Pengendali Dampak Lingkungan
-                      <span className="hidden sm:inline"> · </span>
-                      <span className="block sm:inline text-primary/80 font-medium">KLH / BPLH</span>
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+
+                  <CardContent className="relative p-7 md:p-10 flex flex-col h-full">
+                    <div className="flex items-center gap-1 mb-5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+
+                    <blockquote className="text-base md:text-lg leading-relaxed text-foreground/90 font-medium mb-6 flex-1 space-y-4">
+                      {t.quote.map((para, i) => (
+                        <p key={i} className="first:before:content-['“'] first:before:text-primary first:before:font-display first:before:text-2xl first:before:mr-1 first:before:align-[-0.15em] last:after:content-['”'] last:after:text-primary last:after:font-display last:after:text-2xl last:after:ml-1 last:after:align-[-0.15em]">
+                          {para}
+                        </p>
+                      ))}
+                    </blockquote>
+
+                    <div className="flex items-center gap-4 pt-5 border-t border-border">
+                      <div className="relative shrink-0">
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-md" />
+                        <img
+                          src={t.photo}
+                          alt={t.name}
+                          className="relative h-14 w-14 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-display font-bold text-base leading-tight">
+                          {t.name}
+                        </p>
+                        <p className="text-xs md:text-sm text-muted-foreground mt-1 leading-snug">
+                          {t.role}
+                          <span className="hidden sm:inline"> · </span>
+                          <span className="block sm:inline text-primary/80 font-medium">{t.org}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
