@@ -35,11 +35,13 @@ import pnsAlumni from "@assets/pns_1.png";
 import jondesCard from "@assets/testimoni/jondes_3.png";
 import telaCard from "@assets/testimoni/tela_1.png";
 import enongCard from "@assets/testimoni/enong_1.png";
+import sindamiCard from "@assets/testimoni/sindami.png";
 
 const TESTIMONI_CARDS: { src: string; alt: string }[] = [
   { src: jondesCard, alt: "Testimoni Jonathan de Santo — PNS KLH/BPLH" },
   { src: telaCard, alt: "Testimoni Tiara Wulan — PNS Dinas Pertanian Jawa Barat" },
   { src: enongCard, alt: "Testimoni Muhammad Rangga Prayoga — PNS Kemenkumham" },
+  { src: sindamiCard, alt: "Testimoni Asih Indah Utami — PNS Kementerian Pertanian" },
 ];
 import { RobotMascot } from "@/components/robot-mascot";
 import { FlowingRibbons } from "@/components/background-decorations";
