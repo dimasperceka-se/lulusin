@@ -8,6 +8,7 @@
     "seed": "tsx --env-file=../artifacts/api-server/.env ./src/seed.ts",
     "seed-admin": "tsx --env-file=../artifacts/api-server/.env ./src/seed-admin.ts",
     "create-student": "tsx --env-file=../artifacts/api-server/.env ./src/create-student.ts",
+    "delete-student": "tsx --env-file=../artifacts/api-server/.env ./src/delete-student.ts",
     "import-belajarbro": "tsx --env-file=../artifacts/api-server/.env ./src/import-belajarbro.ts",
     "import-tiu-100": "tsx --env-file=../artifacts/api-server/.env ./src/import-tiu-100.ts",
     "import-materi-tiu": "tsx --env-file=../artifacts/api-server/.env ./src/import-materi-tiu.ts",
