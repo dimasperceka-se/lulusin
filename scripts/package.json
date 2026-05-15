@@ -9,6 +9,7 @@
     "seed-admin": "tsx --env-file=../artifacts/api-server/.env ./src/seed-admin.ts",
     "create-student": "tsx --env-file=../artifacts/api-server/.env ./src/create-student.ts",
     "delete-student": "tsx --env-file=../artifacts/api-server/.env ./src/delete-student.ts",
+    "generate-explanations": "tsx --env-file=../artifacts/api-server/.env ./src/generate-explanations.ts",
     "import-belajarbro": "tsx --env-file=../artifacts/api-server/.env ./src/import-belajarbro.ts",
     "import-tiu-100": "tsx --env-file=../artifacts/api-server/.env ./src/import-tiu-100.ts",
     "import-materi-tiu": "tsx --env-file=../artifacts/api-server/.env ./src/import-materi-tiu.ts",
@@ -22,6 +23,7 @@
     "@workspace/db": "workspace:*",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "catalog:",
+    "openai": "^4.104.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
