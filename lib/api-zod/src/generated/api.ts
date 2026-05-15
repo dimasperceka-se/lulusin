@@ -1474,6 +1474,8 @@ export const SubmitAttemptResponse = zod.object({
   rating: zod.number().min(1).max(submitAttemptResponseRatingMax).nullish(),
   ratingComment: zod.string().nullish(),
   ratedAt: zod.string().nullish(),
+  quizTitle: zod.string().nullish(),
+  tryoutTitle: zod.string().nullish(),
   answers: zod
     .array(
       zod.object({
@@ -1523,6 +1525,8 @@ export const GetAttemptResponse = zod.object({
   rating: zod.number().min(1).max(getAttemptResponseRatingMax).nullish(),
   ratingComment: zod.string().nullish(),
   ratedAt: zod.string().nullish(),
+  quizTitle: zod.string().nullish(),
+  tryoutTitle: zod.string().nullish(),
   answers: zod
     .array(
       zod.object({

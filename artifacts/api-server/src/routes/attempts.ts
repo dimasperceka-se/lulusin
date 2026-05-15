@@ -6,6 +6,73 @@ import { SubmitAttemptBody, ListAttemptsQueryParams, RateAttemptBody } from "@wo
 
 const router = Router();
 
+type Attempt = typeof attemptsTable.$inferSelect;
+type Question = typeof questionsTable.$inferSelect;
+
+async function loadAttemptQuestions(attempt: Attempt): Promise<{
+  allQuestions: Question[];
+  quizTitle: string | null;
+  tryoutTitle: string | null;
+}> {
+  let allQuestions: Question[] = [];
+  let quizTitle: string | null = null;
+  let tryoutTitle: string | null = null;
+
+  if (attempt.type === "quiz" && attempt.quizId) {
+    const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, attempt.quizId));
+    quizTitle = quiz?.title ?? null;
+    const quizQs = await db.select().from(quizQuestionsTable).where(eq(quizQuestionsTable.quizId, attempt.quizId));
+    allQuestions = (await Promise.all(quizQs.map(async qq => {
+      const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, qq.questionId));
+      return q;
+    }))).filter(Boolean) as Question[];
+  } else if (attempt.type === "tryout" && attempt.tryoutId) {
+    const [tryout] = await db.select().from(tryoutsTable).where(eq(tryoutsTable.id, attempt.tryoutId));
+    tryoutTitle = tryout?.title ?? null;
+    const tryoutQs = await db.select().from(tryoutQuestionsTable).where(eq(tryoutQuestionsTable.tryoutId, attempt.tryoutId));
+    allQuestions = (await Promise.all(tryoutQs.map(async tq => {
+      const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, tq.questionId));
+      return q;
+    }))).filter(Boolean) as Question[];
+  }
+
+  return { allQuestions, quizTitle, tryoutTitle };
+}
+
+function buildAnswerDetails(allQuestions: Question[], answers: Record<string, string>) {
+  let correct = 0;
+  const items = allQuestions.map(q => {
+    const userAnswer = answers[String(q.id)] ?? null;
+    const isCorrect = userAnswer === q.correctAnswer;
+    if (isCorrect) correct++;
+    return {
+      questionId: q.id,
+      questionText: q.questionText,
+      optionA: q.optionA,
+      optionB: q.optionB,
+      optionC: q.optionC,
+      optionD: q.optionD,
+      optionE: q.optionE,
+      userAnswer,
+      correctAnswer: q.correctAnswer,
+      isCorrect,
+      explanation: q.explanation,
+      category: q.category,
+    };
+  });
+  return { items, correct };
+}
+
+function computePassed(attempt: Pick<Attempt, "type" | "score" | "twkScore" | "tiuScore" | "tkpScore">): boolean {
+  const { type, score, twkScore, tiuScore, tkpScore } = attempt;
+  if (type === "tryout" && twkScore !== null && twkScore !== undefined) {
+    return twkScore >= 65 &&
+      tiuScore !== null && tiuScore !== undefined && tiuScore >= 80 &&
+      tkpScore !== null && tkpScore !== undefined && tkpScore >= 83;
+  }
+  return (score ?? 0) >= 70;
+}
+
 router.post("/quizzes/:id/start", authenticate, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, id));
@@ -59,68 +126,23 @@ router.post("/attempts/:id/submit", authenticate, async (req, res): Promise<void
   const answers = parsed.data.answers as Record<string, string>;
   const finishedAt = new Date();
 
-  let allQuestions: typeof questionsTable.$inferSelect[] = [];
-  let quizTitle: string | null = null;
-  let tryoutTitle: string | null = null;
+  const { allQuestions, quizTitle, tryoutTitle } = await loadAttemptQuestions(attempt);
+  const { items: answerDetails, correct } = buildAnswerDetails(allQuestions, answers);
 
-  if (attempt.type === "quiz" && attempt.quizId) {
-    const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, attempt.quizId));
-    quizTitle = quiz?.title ?? null;
-    const quizQs = await db.select().from(quizQuestionsTable).where(eq(quizQuestionsTable.quizId, attempt.quizId));
-    allQuestions = (await Promise.all(quizQs.map(async qq => {
-      const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, qq.questionId));
-      return q;
-    }))).filter(Boolean) as typeof questionsTable.$inferSelect[];
-  } else if (attempt.type === "tryout" && attempt.tryoutId) {
-    const [tryout] = await db.select().from(tryoutsTable).where(eq(tryoutsTable.id, attempt.tryoutId));
-    tryoutTitle = tryout?.title ?? null;
-    const tryoutQs = await db.select().from(tryoutQuestionsTable).where(eq(tryoutQuestionsTable.tryoutId, attempt.tryoutId));
-    allQuestions = (await Promise.all(tryoutQs.map(async tq => {
-      const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, tq.questionId));
-      return q;
-    }))).filter(Boolean) as typeof questionsTable.$inferSelect[];
-  }
-
-  let correct = 0;
   let twkCorrect = 0, tiuCorrect = 0, tkpCorrect = 0;
   let twkTotal = 0, tiuTotal = 0, tkpTotal = 0;
-
-  const answerDetails = allQuestions.map(q => {
-    const userAnswer = answers[String(q.id)] ?? null;
-    const isCorrect = userAnswer === q.correctAnswer;
-    if (isCorrect) correct++;
-
-    if (q.category === "TWK") { twkTotal++; if (isCorrect) twkCorrect++; }
-    else if (q.category === "TIU") { tiuTotal++; if (isCorrect) tiuCorrect++; }
-    else if (q.category === "TKP") { tkpTotal++; if (isCorrect) tkpCorrect++; }
-
-    return {
-      questionId: q.id,
-      questionText: q.questionText,
-      optionA: q.optionA,
-      optionB: q.optionB,
-      optionC: q.optionC,
-      optionD: q.optionD,
-      optionE: q.optionE,
-      userAnswer,
-      correctAnswer: q.correctAnswer,
-      isCorrect,
-      explanation: q.explanation,
-      category: q.category,
-    };
-  });
+  for (const a of answerDetails) {
+    if (a.category === "TWK") { twkTotal++; if (a.isCorrect) twkCorrect++; }
+    else if (a.category === "TIU") { tiuTotal++; if (a.isCorrect) tiuCorrect++; }
+    else if (a.category === "TKP") { tkpTotal++; if (a.isCorrect) tkpCorrect++; }
+  }
 
   const totalQuestions = allQuestions.length;
   const score = totalQuestions > 0 ? (correct / totalQuestions) * 100 : 0;
-
-  // CPNS TWK/TIU/TKP scoring (TKP uses weighted scoring: 5 for correct, 1-4 for others, 0 for unanswered)
   const twkScore = twkTotal > 0 ? (twkCorrect / twkTotal) * 100 : null;
   const tiuScore = tiuTotal > 0 ? (tiuCorrect / tiuTotal) * 100 : null;
   const tkpScore = tkpTotal > 0 ? (tkpCorrect / tkpTotal) * 100 : null;
-
-  const passed = attempt.type === "tryout" && twkScore !== null
-    ? (twkScore >= 65 && tiuScore !== null && tiuScore >= 80 && tkpScore !== null && tkpScore >= 83)
-    : score >= 70;
+  const passed = computePassed({ type: attempt.type, score, twkScore, tiuScore, tkpScore });
 
   const [updated] = await db.update(attemptsTable).set({
     score,
@@ -144,6 +166,9 @@ router.post("/attempts/:id/submit", authenticate, async (req, res): Promise<void
     tiuScore,
     tkpScore,
     passed,
+    rating: updated.rating,
+    ratingComment: updated.ratingComment,
+    ratedAt: updated.ratedAt,
     startedAt: updated.startedAt,
     finishedAt,
     answers: answerDetails,
@@ -189,7 +214,34 @@ router.get("/attempts/:id", authenticate, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Attempt not found" });
     return;
   }
-  res.json(attempt);
+
+  const { allQuestions, quizTitle, tryoutTitle } = await loadAttemptQuestions(attempt);
+  const answersJson = (attempt.answersJson ?? {}) as Record<string, string>;
+  const { items: answerDetails, correct } = buildAnswerDetails(allQuestions, answersJson);
+  const passed = computePassed(attempt);
+
+  res.json({
+    id: attempt.id,
+    userId: attempt.userId,
+    quizId: attempt.quizId,
+    tryoutId: attempt.tryoutId,
+    type: attempt.type,
+    score: attempt.score ?? 0,
+    totalQuestions: allQuestions.length,
+    correctAnswers: correct,
+    twkScore: attempt.twkScore,
+    tiuScore: attempt.tiuScore,
+    tkpScore: attempt.tkpScore,
+    passed,
+    rating: attempt.rating,
+    ratingComment: attempt.ratingComment,
+    ratedAt: attempt.ratedAt,
+    startedAt: attempt.startedAt,
+    finishedAt: attempt.finishedAt,
+    answers: answerDetails,
+    quizTitle,
+    tryoutTitle,
+  });
 });
 
 router.get("/attempts", authenticate, async (req, res): Promise<void> => {

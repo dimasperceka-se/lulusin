@@ -2645,6 +2645,10 @@ components:
           type: ["string", "null"]
         ratedAt:
           type: ["string", "null"]
+        quizTitle:
+          type: ["string", "null"]
+        tryoutTitle:
+          type: ["string", "null"]
         answers:
           type: array
           items:

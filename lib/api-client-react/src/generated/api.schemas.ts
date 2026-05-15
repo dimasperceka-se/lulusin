@@ -770,6 +770,10 @@ export interface AttemptResult {
   ratingComment?: string | null;
   /** @nullable */
   ratedAt?: string | null;
+  /** @nullable */
+  quizTitle?: string | null;
+  /** @nullable */
+  tryoutTitle?: string | null;
   answers?: AnswerDetail[];
 }
 
