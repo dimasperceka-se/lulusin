@@ -13,6 +13,7 @@ export const materialsTable = pgTable("materials", {
   fileUrl: text("file_url"),
   content: text("content"),
   category: text("category"),
+  tier: text("tier", { enum: ["free", "basic", "advance"] }).notNull().default("free"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

@@ -754,6 +754,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/Enrollment"
 
+  /enrollments/free:
+    post:
+      operationId: enrollFreeTier
+      tags: [enrollments]
+      summary: Enroll the current student in a package at the Free tier (skips orders)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnrollFreeInput"
+      responses:
+        "201":
+          description: Enrollment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+
   /enrollments/{id}:
     get:
       operationId: getEnrollment
@@ -1886,6 +1907,13 @@ components:
           type: string
         price:
           type: integer
+          description: Price of the Free tier (typically 0). Used as the headline price.
+        priceBasic:
+          type: ["integer", "null"]
+          description: Price for the Premium Basic tier. Null disables the tier.
+        priceAdvance:
+          type: ["integer", "null"]
+          description: Price for the Premium Advance tier. Null disables the tier.
         durationDays:
           type: integer
         category:
@@ -1919,6 +1947,10 @@ components:
           type: string
         price:
           type: integer
+        priceBasic:
+          type: ["integer", "null"]
+        priceAdvance:
+          type: ["integer", "null"]
         durationDays:
           type: integer
         category:
@@ -1954,6 +1986,10 @@ components:
           type: string
         price:
           type: integer
+        priceBasic:
+          type: ["integer", "null"]
+        priceAdvance:
+          type: ["integer", "null"]
         durationDays:
           type: integer
         category:
@@ -1973,6 +2009,10 @@ components:
           type: string
         price:
           type: integer
+        priceBasic:
+          type: ["integer", "null"]
+        priceAdvance:
+          type: ["integer", "null"]
         durationDays:
           type: integer
         category:
@@ -2026,7 +2066,7 @@ components:
     # Order
     Order:
       type: object
-      required: [id, userId, packageId, orderCode, amount, uniqueAmount, status, paymentMethod, expiredAt, createdAt]
+      required: [id, userId, packageId, orderCode, amount, uniqueAmount, status, paymentMethod, expiredAt, createdAt, tier]
       properties:
         id:
           type: integer
@@ -2040,6 +2080,9 @@ components:
           type: integer
         uniqueAmount:
           type: integer
+        tier:
+          type: string
+          enum: [free, basic, advance]
         status:
           type: string
           enum: [PENDING, WAITING_VERIFICATION, PAID, EXPIRED, REJECTED]
@@ -2084,6 +2127,10 @@ components:
       properties:
         packageId:
           type: integer
+        tier:
+          type: string
+          enum: [basic, advance]
+          description: Tier to purchase. Free tier does not go through orders — use POST /enrollments/free instead.
         paymentMethod:
           type: string
           enum: [BANK_TRANSFER, QRIS]
@@ -2131,10 +2178,17 @@ components:
         rejectionReason:
           type: ["string", "null"]
 
+    EnrollFreeInput:
+      type: object
+      required: [packageId]
+      properties:
+        packageId:
+          type: integer
+
     # Enrollment
     Enrollment:
       type: object
-      required: [id, userId, packageId, startedAt, expiredAt, isActive]
+      required: [id, userId, packageId, startedAt, expiredAt, isActive, tier]
       properties:
         id:
           type: integer
@@ -2148,6 +2202,9 @@ components:
           type: string
         isActive:
           type: boolean
+        tier:
+          type: string
+          enum: [free, basic, advance]
         package:
           $ref: "#/components/schemas/Package"
         progressPercent:
@@ -2156,7 +2213,7 @@ components:
     # Material
     Material:
       type: object
-      required: [id, packageId, title, orderIndex, createdAt]
+      required: [id, packageId, title, orderIndex, createdAt, tier]
       properties:
         id:
           type: integer
@@ -2174,6 +2231,10 @@ components:
         category:
           type: ["string", "null"]
           description: Category for grouping in UI (e.g. "TWK", "TIU", "TKP", "UMUM").
+        tier:
+          type: string
+          enum: [free, basic, advance]
+          description: Minimum tier required to access this material.
         orderIndex:
           type: integer
         createdAt:
@@ -2349,7 +2410,7 @@ components:
     # Quiz
     Quiz:
       type: object
-      required: [id, packageId, title, timeLimit, passingScore, createdAt]
+      required: [id, packageId, title, timeLimit, passingScore, createdAt, tier]
       properties:
         id:
           type: integer
@@ -2363,6 +2424,9 @@ components:
           type: integer
         passingScore:
           type: integer
+        tier:
+          type: string
+          enum: [free, basic, advance]
         questionCount:
           type: ["integer", "null"]
         createdAt:
@@ -2428,7 +2492,7 @@ components:
     # Tryout
     Tryout:
       type: object
-      required: [id, title, type, durationMinutes, createdAt]
+      required: [id, title, type, durationMinutes, createdAt, tier]
       properties:
         id:
           type: integer
@@ -2445,6 +2509,9 @@ components:
           type: ["string", "null"]
         packageId:
           type: ["integer", "null"]
+        tier:
+          type: string
+          enum: [free, basic, advance]
         questionCount:
           type: ["integer", "null"]
         createdAt:

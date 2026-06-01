@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { db, tryoutsTable, tryoutQuestionsTable, questionsTable, attemptsTable } from "@workspace/db";
+import { db, tryoutsTable, tryoutQuestionsTable, questionsTable, attemptsTable, enrollmentsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { CreateTryoutBody, UpdateTryoutBody, AddTryoutQuestionBody, ListTryoutsQueryParams } from "@workspace/api-zod";
 
 const router = Router();
+const TIER_RANK: Record<string, number> = { free: 0, basic: 1, advance: 2 };
 
 router.get("/tryouts", authenticate, async (req, res): Promise<void> => {
   const params = ListTryoutsQueryParams.safeParse(req.query);
@@ -16,7 +17,29 @@ router.get("/tryouts", authenticate, async (req, res): Promise<void> => {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const tryouts = await db.select().from(tryoutsTable).where(whereClause);
-  res.json(tryouts);
+
+  const isAdmin = req.user!.role === "admin" || req.user!.role === "tutor";
+  if (isAdmin) {
+    res.json(tryouts);
+    return;
+  }
+
+  const userId = req.user!.userId;
+  const enrollments = await db.select().from(enrollmentsTable).where(
+    and(eq(enrollmentsTable.userId, userId), eq(enrollmentsTable.isActive, true))
+  );
+  const tierByPackage = new Map<number, number>();
+  for (const e of enrollments) {
+    const rank = TIER_RANK[e.tier] ?? 0;
+    tierByPackage.set(e.packageId, Math.max(tierByPackage.get(e.packageId) ?? 0, rank));
+  }
+  const visible = tryouts.filter((t) => {
+    if (t.packageId == null) return true;
+    const userRank = tierByPackage.get(t.packageId);
+    if (userRank == null) return false;
+    return (TIER_RANK[t.tier] ?? 0) <= userRank;
+  });
+  res.json(visible);
 });
 
 router.post("/tryouts", authenticate, requireRole("admin", "tutor"), async (req, res): Promise<void> => {

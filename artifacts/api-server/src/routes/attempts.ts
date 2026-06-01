@@ -1,10 +1,20 @@
 import { Router } from "express";
-import { db, attemptsTable, quizzesTable, quizQuestionsTable, tryoutsTable, tryoutQuestionsTable, questionsTable } from "@workspace/db";
+import { db, attemptsTable, quizzesTable, quizQuestionsTable, tryoutsTable, tryoutQuestionsTable, questionsTable, enrollmentsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { authenticate } from "../middlewares/auth";
 import { SubmitAttemptBody, ListAttemptsQueryParams, RateAttemptBody } from "@workspace/api-zod";
 
 const router = Router();
+const TIER_RANK: Record<string, number> = { free: 0, basic: 1, advance: 2 };
+
+async function getUserTierRank(userId: number, packageId: number | null | undefined): Promise<number> {
+  if (packageId == null) return 0;
+  const enrollments = await db.select().from(enrollmentsTable).where(
+    and(eq(enrollmentsTable.userId, userId), eq(enrollmentsTable.packageId, packageId), eq(enrollmentsTable.isActive, true))
+  );
+  if (enrollments.length === 0) return -1;
+  return Math.max(...enrollments.map((e) => TIER_RANK[e.tier] ?? 0));
+}
 
 type Attempt = typeof attemptsTable.$inferSelect;
 type Question = typeof questionsTable.$inferSelect;
@@ -13,14 +23,17 @@ async function loadAttemptQuestions(attempt: Attempt): Promise<{
   allQuestions: Question[];
   quizTitle: string | null;
   tryoutTitle: string | null;
+  packageId: number | null;
 }> {
   let allQuestions: Question[] = [];
   let quizTitle: string | null = null;
   let tryoutTitle: string | null = null;
+  let packageId: number | null = null;
 
   if (attempt.type === "quiz" && attempt.quizId) {
     const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, attempt.quizId));
     quizTitle = quiz?.title ?? null;
+    packageId = quiz?.packageId ?? null;
     const quizQs = await db.select().from(quizQuestionsTable).where(eq(quizQuestionsTable.quizId, attempt.quizId));
     allQuestions = (await Promise.all(quizQs.map(async qq => {
       const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, qq.questionId));
@@ -29,6 +42,7 @@ async function loadAttemptQuestions(attempt: Attempt): Promise<{
   } else if (attempt.type === "tryout" && attempt.tryoutId) {
     const [tryout] = await db.select().from(tryoutsTable).where(eq(tryoutsTable.id, attempt.tryoutId));
     tryoutTitle = tryout?.title ?? null;
+    packageId = tryout?.packageId ?? null;
     const tryoutQs = await db.select().from(tryoutQuestionsTable).where(eq(tryoutQuestionsTable.tryoutId, attempt.tryoutId));
     allQuestions = (await Promise.all(tryoutQs.map(async tq => {
       const [q] = await db.select().from(questionsTable).where(eq(questionsTable.id, tq.questionId));
@@ -36,7 +50,7 @@ async function loadAttemptQuestions(attempt: Attempt): Promise<{
     }))).filter(Boolean) as Question[];
   }
 
-  return { allQuestions, quizTitle, tryoutTitle };
+  return { allQuestions, quizTitle, tryoutTitle, packageId };
 }
 
 function buildAnswerDetails(allQuestions: Question[], answers: Record<string, string>) {
@@ -80,6 +94,14 @@ router.post("/quizzes/:id/start", authenticate, async (req, res): Promise<void> 
     res.status(404).json({ error: "Quiz not found" });
     return;
   }
+  const isAdmin = req.user!.role === "admin" || req.user!.role === "tutor";
+  if (!isAdmin) {
+    const userRank = await getUserTierRank(req.user!.userId, quiz.packageId);
+    if (userRank < (TIER_RANK[quiz.tier] ?? 0)) {
+      res.status(403).json({ error: `Upgrade ke tier "${quiz.tier}" untuk mengakses kuis ini.` });
+      return;
+    }
+  }
   const [attempt] = await db.insert(attemptsTable).values({
     userId: req.user!.userId,
     quizId: id,
@@ -95,6 +117,14 @@ router.post("/tryouts/:id/start", authenticate, async (req, res): Promise<void> 
   if (!tryout) {
     res.status(404).json({ error: "Tryout not found" });
     return;
+  }
+  const isAdmin = req.user!.role === "admin" || req.user!.role === "tutor";
+  if (!isAdmin && tryout.packageId != null) {
+    const userRank = await getUserTierRank(req.user!.userId, tryout.packageId);
+    if (userRank < (TIER_RANK[tryout.tier] ?? 0)) {
+      res.status(403).json({ error: `Upgrade ke tier "${tryout.tier}" untuk mengakses tryout ini.` });
+      return;
+    }
   }
   const [attempt] = await db.insert(attemptsTable).values({
     userId: req.user!.userId,
@@ -126,8 +156,13 @@ router.post("/attempts/:id/submit", authenticate, async (req, res): Promise<void
   const answers = parsed.data.answers as Record<string, string>;
   const finishedAt = new Date();
 
-  const { allQuestions, quizTitle, tryoutTitle } = await loadAttemptQuestions(attempt);
-  const { items: answerDetails, correct } = buildAnswerDetails(allQuestions, answers);
+  const { allQuestions, quizTitle, tryoutTitle, packageId } = await loadAttemptQuestions(attempt);
+  const { items: rawAnswerDetails, correct } = buildAnswerDetails(allQuestions, answers);
+  const userTierRank = await getUserTierRank(req.user!.userId, packageId);
+  const canSeePembahasan = userTierRank >= TIER_RANK.advance;
+  const answerDetails = canSeePembahasan
+    ? rawAnswerDetails
+    : rawAnswerDetails.map((a) => ({ ...a, explanation: null }));
 
   let twkCorrect = 0, tiuCorrect = 0, tkpCorrect = 0;
   let twkTotal = 0, tiuTotal = 0, tkpTotal = 0;
@@ -215,10 +250,15 @@ router.get("/attempts/:id", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  const { allQuestions, quizTitle, tryoutTitle } = await loadAttemptQuestions(attempt);
+  const { allQuestions, quizTitle, tryoutTitle, packageId } = await loadAttemptQuestions(attempt);
   const answersJson = (attempt.answersJson ?? {}) as Record<string, string>;
-  const { items: answerDetails, correct } = buildAnswerDetails(allQuestions, answersJson);
+  const { items: rawAnswerDetails, correct } = buildAnswerDetails(allQuestions, answersJson);
   const passed = computePassed(attempt);
+  const userTierRank = await getUserTierRank(req.user!.userId, packageId);
+  const canSeePembahasan = userTierRank >= TIER_RANK.advance;
+  const answerDetails = canSeePembahasan
+    ? rawAnswerDetails
+    : rawAnswerDetails.map((a) => ({ ...a, explanation: null }));
 
   res.json({
     id: attempt.id,

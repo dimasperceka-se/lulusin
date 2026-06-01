@@ -1,9 +1,31 @@
 import { Router } from "express";
 import { db, enrollmentsTable, packagesTable, materialProgressTable, materialsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
-import { authenticate } from "../middlewares/auth";
+import { authenticate, requireRole } from "../middlewares/auth";
+import { EnrollFreeTierBody } from "@workspace/api-zod";
+import { upsertEnrollment } from "./orders";
 
 const router = Router();
+
+router.post("/enrollments/free", authenticate, requireRole("student"), async (req, res): Promise<void> => {
+  const parsed = EnrollFreeTierBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [pkg] = await db.select().from(packagesTable).where(eq(packagesTable.id, parsed.data.packageId));
+  if (!pkg) {
+    res.status(404).json({ error: "Package not found" });
+    return;
+  }
+  const expiredAt = new Date();
+  expiredAt.setDate(expiredAt.getDate() + pkg.durationDays);
+  await upsertEnrollment(req.user!.userId, parsed.data.packageId, "free", expiredAt);
+  const [enrollment] = await db.select().from(enrollmentsTable).where(
+    and(eq(enrollmentsTable.userId, req.user!.userId), eq(enrollmentsTable.packageId, parsed.data.packageId))
+  );
+  res.status(201).json({ ...enrollment, package: pkg });
+});
 
 router.get("/enrollments", authenticate, async (req, res): Promise<void> => {
   const isAdmin = req.user!.role === "admin";

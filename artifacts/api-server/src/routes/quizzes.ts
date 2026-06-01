@@ -1,15 +1,25 @@
 import { Router } from "express";
-import { db, quizzesTable, quizQuestionsTable, questionsTable } from "@workspace/db";
+import { db, quizzesTable, quizQuestionsTable, questionsTable, enrollmentsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { authenticate, requireRole } from "../middlewares/auth";
 import { CreateQuizBody, UpdateQuizBody, AddQuizQuestionBody } from "@workspace/api-zod";
 
 const router = Router();
+const TIER_RANK: Record<string, number> = { free: 0, basic: 1, advance: 2 };
 
 router.get("/packages/:packageId/quizzes", authenticate, async (req, res): Promise<void> => {
   const packageId = parseInt(Array.isArray(req.params.packageId) ? req.params.packageId[0] : req.params.packageId, 10);
+  const isAdmin = req.user!.role === "admin" || req.user!.role === "tutor";
+  let userTierRank = Infinity;
+  if (!isAdmin) {
+    const enrollments = await db.select().from(enrollmentsTable).where(
+      and(eq(enrollmentsTable.userId, req.user!.userId), eq(enrollmentsTable.packageId, packageId), eq(enrollmentsTable.isActive, true))
+    );
+    userTierRank = enrollments.length === 0 ? -1 : Math.max(...enrollments.map((e) => TIER_RANK[e.tier] ?? 0));
+  }
   const quizzes = await db.select().from(quizzesTable).where(eq(quizzesTable.packageId, packageId));
-  res.json(quizzes);
+  const visible = quizzes.filter((q) => (TIER_RANK[q.tier] ?? 0) <= userTierRank);
+  res.json(visible);
 });
 
 router.post("/packages/:packageId/quizzes", authenticate, requireRole("admin", "tutor"), async (req, res): Promise<void> => {

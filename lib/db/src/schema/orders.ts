@@ -12,6 +12,7 @@ export const ordersTable = pgTable("orders", {
   orderCode: text("order_code").notNull().unique(),
   amount: integer("amount").notNull(),
   uniqueAmount: integer("unique_amount").notNull(),
+  tier: text("tier", { enum: ["free", "basic", "advance"] }).notNull().default("basic"),
   referralCode: text("referral_code"),
   referralHolderId: integer("referral_holder_id").references(() => usersTable.id),
   discountAmount: integer("discount_amount").notNull().default(0),

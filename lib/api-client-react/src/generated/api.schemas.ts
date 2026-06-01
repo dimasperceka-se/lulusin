@@ -130,7 +130,18 @@ export interface Package {
   id: number;
   name: string;
   description: string;
+  /** Price of the Free tier (typically 0). Used as the headline price. */
   price: number;
+  /**
+   * Price for the Premium Basic tier. Null disables the tier.
+   * @nullable
+   */
+  priceBasic?: number | null;
+  /**
+   * Price for the Premium Advance tier. Null disables the tier.
+   * @nullable
+   */
+  priceAdvance?: number | null;
   durationDays: number;
   category: PackageCategory;
   /** @nullable */
@@ -146,6 +157,17 @@ export interface Package {
   /** @nullable */
   tryoutCount?: number | null;
 }
+
+/**
+ * Minimum tier required to access this material.
+ */
+export type MaterialTier = (typeof MaterialTier)[keyof typeof MaterialTier];
+
+export const MaterialTier = {
+  free: "free",
+  basic: "basic",
+  advance: "advance",
+} as const;
 
 export interface Material {
   id: number;
@@ -165,11 +187,21 @@ export interface Material {
    * @nullable
    */
   category?: string | null;
+  /** Minimum tier required to access this material. */
+  tier: MaterialTier;
   orderIndex: number;
   createdAt: string;
   /** @nullable */
   isRead?: boolean | null;
 }
+
+export type QuizTier = (typeof QuizTier)[keyof typeof QuizTier];
+
+export const QuizTier = {
+  free: "free",
+  basic: "basic",
+  advance: "advance",
+} as const;
 
 export interface Quiz {
   id: number;
@@ -179,6 +211,7 @@ export interface Quiz {
   description?: string | null;
   timeLimit: number;
   passingScore: number;
+  tier: QuizTier;
   /** @nullable */
   questionCount?: number | null;
   createdAt: string;
@@ -192,6 +225,14 @@ export const TryoutType = {
   CUSTOM: "CUSTOM",
 } as const;
 
+export type TryoutTier = (typeof TryoutTier)[keyof typeof TryoutTier];
+
+export const TryoutTier = {
+  free: "free",
+  basic: "basic",
+  advance: "advance",
+} as const;
+
 export interface Tryout {
   id: number;
   title: string;
@@ -203,6 +244,7 @@ export interface Tryout {
   scheduledAt?: string | null;
   /** @nullable */
   packageId?: number | null;
+  tier: TryoutTier;
   /** @nullable */
   questionCount?: number | null;
   createdAt: string;
@@ -213,6 +255,10 @@ export interface PackageDetail {
   name: string;
   description: string;
   price: number;
+  /** @nullable */
+  priceBasic?: number | null;
+  /** @nullable */
+  priceAdvance?: number | null;
   durationDays: number;
   category: string;
   /** @nullable */
@@ -239,6 +285,10 @@ export interface PackageInput {
   name: string;
   description: string;
   price: number;
+  /** @nullable */
+  priceBasic?: number | null;
+  /** @nullable */
+  priceAdvance?: number | null;
   durationDays: number;
   category: PackageInputCategory;
   /** @nullable */
@@ -250,6 +300,10 @@ export interface PackageUpdate {
   name?: string;
   description?: string;
   price?: number;
+  /** @nullable */
+  priceBasic?: number | null;
+  /** @nullable */
+  priceAdvance?: number | null;
   durationDays?: number;
   category?: string;
   /** @nullable */
@@ -279,6 +333,14 @@ export interface BankAccountUpdate {
   isActive?: boolean;
 }
 
+export type OrderTier = (typeof OrderTier)[keyof typeof OrderTier];
+
+export const OrderTier = {
+  free: "free",
+  basic: "basic",
+  advance: "advance",
+} as const;
+
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
@@ -304,6 +366,7 @@ export interface Order {
   orderCode: string;
   amount: number;
   uniqueAmount: number;
+  tier: OrderTier;
   status: OrderStatus;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */
@@ -334,6 +397,17 @@ export interface Order {
   bankAccounts?: BankAccount[];
 }
 
+/**
+ * Tier to purchase. Free tier does not go through orders — use POST /enrollments/free instead.
+ */
+export type OrderInputTier =
+  (typeof OrderInputTier)[keyof typeof OrderInputTier];
+
+export const OrderInputTier = {
+  basic: "basic",
+  advance: "advance",
+} as const;
+
 export type OrderInputPaymentMethod =
   (typeof OrderInputPaymentMethod)[keyof typeof OrderInputPaymentMethod];
 
@@ -344,6 +418,8 @@ export const OrderInputPaymentMethod = {
 
 export interface OrderInput {
   packageId: number;
+  /** Tier to purchase. Free tier does not go through orders — use POST /enrollments/free instead. */
+  tier?: OrderInputTier;
   paymentMethod?: OrderInputPaymentMethod;
   /**
    * Optional referral code applied to this order; triggers 10% discount if valid.
@@ -389,6 +465,19 @@ export interface OrderVerifyInput {
   rejectionReason?: string | null;
 }
 
+export interface EnrollFreeInput {
+  packageId: number;
+}
+
+export type EnrollmentTier =
+  (typeof EnrollmentTier)[keyof typeof EnrollmentTier];
+
+export const EnrollmentTier = {
+  free: "free",
+  basic: "basic",
+  advance: "advance",
+} as const;
+
 export interface Enrollment {
   id: number;
   userId: number;
@@ -396,6 +485,7 @@ export interface Enrollment {
   startedAt: string;
   expiredAt: string;
   isActive: boolean;
+  tier: EnrollmentTier;
   package?: Package;
   /** @nullable */
   progressPercent?: number | null;

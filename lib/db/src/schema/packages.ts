@@ -7,6 +7,8 @@ export const packagesTable = pgTable("packages", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: integer("price").notNull(),
+  priceBasic: integer("price_basic"),
+  priceAdvance: integer("price_advance"),
   durationDays: integer("duration_days").notNull(),
   category: text("category", { enum: ["CPNS", "SD", "SMP", "SMA"] }).notNull(),
   thumbnail: text("thumbnail"),

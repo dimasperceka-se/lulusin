@@ -7,7 +7,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { formatRupiah } from "@/lib/utils";
+import { formatPriceOrFree } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   Search,
   Clock,
@@ -601,8 +602,11 @@ export default function Landing() {
                       </span>
                     </div>
                     <CardTitle className="line-clamp-2 text-lg">{pkg.name}</CardTitle>
-                    <CardDescription className="font-display font-bold text-2xl text-foreground mt-2">
-                      {formatRupiah(pkg.price)}
+                    <CardDescription className={cn(
+                      "font-display font-bold text-2xl mt-2",
+                      pkg.price === 0 ? "text-emerald-600" : "text-foreground",
+                    )}>
+                      {formatPriceOrFree(pkg.price)}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1">

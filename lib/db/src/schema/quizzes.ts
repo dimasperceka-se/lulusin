@@ -12,6 +12,7 @@ export const quizzesTable = pgTable("quizzes", {
   description: text("description"),
   timeLimit: integer("time_limit").notNull().default(30),
   passingScore: integer("passing_score").notNull().default(70),
+  tier: text("tier", { enum: ["free", "basic", "advance"] }).notNull().default("free"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

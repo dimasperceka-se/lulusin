@@ -6,23 +6,28 @@ import { CreateMaterialBody, UpdateMaterialBody } from "@workspace/api-zod";
 
 const router = Router();
 
+const TIER_RANK: Record<string, number> = { free: 0, basic: 1, advance: 2 };
+
 router.get("/packages/:packageId/materials", authenticate, async (req, res): Promise<void> => {
   const packageId = parseInt(Array.isArray(req.params.packageId) ? req.params.packageId[0] : req.params.packageId, 10);
 
   const isAdmin = req.user!.role === "admin" || req.user!.role === "tutor";
+  let userTierRank = Infinity;
   if (!isAdmin) {
-    const enrollment = await db.select().from(enrollmentsTable).where(
+    const enrollments = await db.select().from(enrollmentsTable).where(
       and(eq(enrollmentsTable.userId, req.user!.userId), eq(enrollmentsTable.packageId, packageId), eq(enrollmentsTable.isActive, true))
     );
-    if (enrollment.length === 0) {
+    if (enrollments.length === 0) {
       res.status(403).json({ error: "Not enrolled in this package" });
       return;
     }
+    userTierRank = Math.max(...enrollments.map((e) => TIER_RANK[e.tier] ?? 0));
   }
 
   const materials = await db.select().from(materialsTable).where(eq(materialsTable.packageId, packageId));
+  const visible = materials.filter((m) => (TIER_RANK[m.tier] ?? 0) <= userTierRank);
 
-  const enriched = await Promise.all(materials.map(async (m) => {
+  const enriched = await Promise.all(visible.map(async (m) => {
     const [progress] = await db.select().from(materialProgressTable).where(
       and(eq(materialProgressTable.materialId, m.id), eq(materialProgressTable.userId, req.user!.userId))
     );

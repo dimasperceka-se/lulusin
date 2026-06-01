@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { useGetPackage, useCreateOrder, validateReferralCode } from "@workspace/api-client-react";
+import { useGetPackage, useCreateOrder, useEnrollFreeTier, validateReferralCode } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/navbar";
@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatRupiah } from "@/lib/utils";
+import { cn, formatRupiah } from "@/lib/utils";
 import {
   BookOpen,
   FileText,
@@ -31,7 +31,58 @@ import {
   Wrench,
   Tag,
   X,
+  Crown,
+  Gem,
 } from "lucide-react";
+
+type TierKey = "free" | "basic" | "advance";
+
+type TierSpec = {
+  key: TierKey;
+  label: string;
+  tagline: string;
+  features: string[];
+  icon: React.ComponentType<{ className?: string }>;
+  accent: string;        // border / bg accent classes
+  highlightBorder: string;
+  badgeClass: string;
+  badgeText?: string;
+};
+
+const TIER_SPECS: TierSpec[] = [
+  {
+    key: "free",
+    label: "Free Access",
+    tagline: "Coba dulu, gratis selamanya",
+    features: ["Akses soal terbatas"],
+    icon: Sparkles,
+    accent: "border-card-border bg-card",
+    highlightBorder: "border-card-border",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  {
+    key: "basic",
+    label: "Premium Basic",
+    tagline: "Latihan intensif",
+    features: ["Akses soal lengkap", "Simulasi CAT"],
+    icon: Gem,
+    accent: "border-primary/30 bg-primary/5",
+    highlightBorder: "border-primary/40",
+    badgeClass: "bg-primary/10 text-primary border-primary/30",
+    badgeText: "Paling laku",
+  },
+  {
+    key: "advance",
+    label: "Premium Advance",
+    tagline: "Persiapan paling lengkap",
+    features: ["Akses materi lengkap", "Akses soal lengkap", "Pembahasan", "Simulasi CAT"],
+    icon: Crown,
+    accent: "border-amber-300/60 bg-gradient-to-br from-amber-50 to-primary/5",
+    highlightBorder: "border-amber-400",
+    badgeClass: "bg-amber-100 text-amber-800 border-amber-300",
+    badgeText: "Direkomendasikan",
+  },
+];
 
 export default function PackageDetail() {
   const { id } = useParams();
@@ -43,6 +94,7 @@ export default function PackageDetail() {
   const [referralInput, setReferralInput] = useState("");
   const [appliedReferral, setAppliedReferral] = useState<{ code: string; holderName: string; discountPercent: number } | null>(null);
   const [validating, setValidating] = useState(false);
+  const [pendingTier, setPendingTier] = useState<TierKey | null>(null);
 
   const { data: pkg, isLoading } = useGetPackage(packageId, {
     query: {
@@ -51,9 +103,8 @@ export default function PackageDetail() {
   });
 
   const createOrderMutation = useCreateOrder();
+  const enrollFreeMutation = useEnrollFreeTier();
 
-  // Returns the applied code on success, or null on failure/invalid.
-  // notify=false suppresses toast (used for silent auto-apply on mount).
   const applyReferralCode = async (rawCode: string, notify = true): Promise<string | null> => {
     const code = rawCode.trim().toUpperCase();
     if (!code) return null;
@@ -125,6 +176,36 @@ export default function PackageDetail() {
       });
   }, [pkg?.materials]);
 
+  // Cumulative counts per tier: a Basic-tier user can see free + basic items;
+  // an Advance-tier user can see everything. The numbers shown on each tier card
+  // are what a user at that tier will actually unlock.
+  const tierCounts = useMemo(() => {
+    const tagCounts = { free: { materials: 0, quizzes: 0, tryouts: 0 }, basic: { materials: 0, quizzes: 0, tryouts: 0 }, advance: { materials: 0, quizzes: 0, tryouts: 0 } };
+    for (const m of pkg?.materials ?? []) tagCounts[m.tier as TierKey].materials++;
+    for (const q of pkg?.quizzes ?? []) tagCounts[q.tier as TierKey].quizzes++;
+    for (const t of pkg?.tryouts ?? []) tagCounts[t.tier as TierKey].tryouts++;
+    const free = { ...tagCounts.free };
+    const basic = {
+      materials: free.materials + tagCounts.basic.materials,
+      quizzes: free.quizzes + tagCounts.basic.quizzes,
+      tryouts: free.tryouts + tagCounts.basic.tryouts,
+    };
+    const advance = {
+      materials: basic.materials + tagCounts.advance.materials,
+      quizzes: basic.quizzes + tagCounts.advance.quizzes,
+      tryouts: basic.tryouts + tagCounts.advance.tryouts,
+    };
+    return { free, basic, advance };
+  }, [pkg?.materials, pkg?.quizzes, pkg?.tryouts]);
+
+  const tierPriceFor = (tier: TierKey): number | null => {
+    if (!pkg) return null;
+    if (tier === "free") return 0;
+    if (tier === "basic") return pkg.priceBasic ?? null;
+    if (tier === "advance") return pkg.priceAdvance ?? null;
+    return null;
+  };
+
   const handleApplyReferral = () => applyReferralCode(referralInput);
 
   const handleRemoveReferral = () => {
@@ -132,38 +213,62 @@ export default function PackageDetail() {
     setReferralInput("");
   };
 
-  const handleBuy = async () => {
-    if (pkg?.maintenanceMode) {
-      toast({
-        title: "Paket dalam maintenance",
-        description: "Paket ini sedang dalam perbaikan dan belum bisa dibeli.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const requireLogin = (): boolean => {
     if (!user) {
       toast({
         title: "Login diperlukan",
-        description: "Silakan login terlebih dahulu untuk membeli paket",
+        description: "Silakan login terlebih dahulu",
       });
       setLocation("/login");
+      return false;
+    }
+    return true;
+  };
+
+  const handleEnrollFree = () => {
+    if (pkg?.maintenanceMode) {
+      toast({ title: "Paket dalam maintenance", variant: "destructive" });
       return;
     }
+    if (!requireLogin()) return;
+    setPendingTier("free");
+    enrollFreeMutation.mutate({ data: { packageId } }, {
+      onSuccess: () => {
+        toast({ title: "Berhasil daftar gratis", description: "Selamat belajar!" });
+        setLocation(`/packages/${packageId}/learn`);
+      },
+      onError: (err) => {
+        toast({
+          title: "Gagal mendaftar",
+          description: err.data?.error || "Terjadi kesalahan",
+          variant: "destructive",
+        });
+        setPendingTier(null);
+      },
+    });
+  };
 
-    // If user typed a code but didn't click "Terapkan", apply it now before creating order.
+  const handleBuyTier = async (tier: "basic" | "advance") => {
+    if (pkg?.maintenanceMode) {
+      toast({ title: "Paket dalam maintenance", variant: "destructive" });
+      return;
+    }
+    if (!requireLogin()) return;
+
     let codeToUse = appliedReferral?.code;
     const pendingInput = referralInput.trim().toUpperCase();
     if (!codeToUse && pendingInput) {
       const applied = await applyReferralCode(pendingInput);
-      if (!applied) return; // invalid; abort buy so user can fix or remove
+      if (!applied) return;
       codeToUse = applied;
     }
 
-    createOrderMutation.mutate({ data: { packageId, referralCode: codeToUse } }, {
+    setPendingTier(tier);
+    createOrderMutation.mutate({ data: { packageId, tier, referralCode: codeToUse } }, {
       onSuccess: (order) => {
         toast({
-          title: "Pesanan berhasil dibuat",
-          description: "Silakan selesaikan pembayaran Anda",
+          title: "Pesanan dibuat",
+          description: "Silakan selesaikan pembayaran",
         });
         setLocation(`/orders/${order.id}`);
       },
@@ -173,6 +278,7 @@ export default function PackageDetail() {
           description: error.data?.error || "Terjadi kesalahan",
           variant: "destructive",
         });
+        setPendingTier(null);
       }
     });
   };
@@ -184,14 +290,9 @@ export default function PackageDetail() {
         <div className="container mx-auto px-4 py-10 max-w-6xl">
           <Skeleton className="h-72 w-full mb-8 rounded-3xl" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-2 space-y-4">
-              <Skeleton className="h-10 w-3/4" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-40 w-full" />
-            </div>
-            <div>
-              <Skeleton className="h-72 w-full" />
-            </div>
+            <Skeleton className="h-72" />
+            <Skeleton className="h-72" />
+            <Skeleton className="h-72" />
           </div>
         </div>
       </div>
@@ -216,6 +317,7 @@ export default function PackageDetail() {
   const quizCount = pkg.quizzes?.length || 0;
   const tryoutCount = pkg.tryouts?.length || 0;
   const materialCount = pkg.materials?.length || 0;
+  const isMutating = createOrderMutation.isPending || enrollFreeMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background">
@@ -223,13 +325,6 @@ export default function PackageDetail() {
 
       {pkg.maintenanceMode && (
         <div className="relative overflow-hidden bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-100 dark:from-amber-950/50 dark:via-yellow-950/50 dark:to-amber-950/50 border-y-2 border-amber-300 dark:border-amber-800">
-          <div
-            className="absolute inset-0 pointer-events-none opacity-60"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(45deg, transparent 0, transparent 14px, rgba(180,83,9,0.06) 14px, rgba(180,83,9,0.06) 28px)",
-            }}
-          />
           <div className="relative container mx-auto max-w-6xl px-4 py-5">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex-shrink-0 h-14 w-14 rounded-full bg-amber-200 dark:bg-amber-900/60 flex items-center justify-center ring-4 ring-amber-300/40 dark:ring-amber-700/40 animate-pulse">
@@ -240,15 +335,10 @@ export default function PackageDetail() {
                   Paket Sedang Dalam Perbaikan
                 </h2>
                 <p className="text-sm md:text-base text-amber-800/90 dark:text-amber-100/80 mt-1">
-                  Tim Lulusin sedang menyempurnakan konten paket ini. Pembelian sementara dinonaktifkan
-                  — cek paket lain atau kembali lagi nanti.
+                  Tim Lulusin sedang menyempurnakan konten paket ini. Pembelian sementara dinonaktifkan.
                 </p>
               </div>
-              <Button
-                variant="outline"
-                className="border-amber-400 dark:border-amber-700 bg-white/60 dark:bg-amber-950/30 hover:bg-amber-200/70 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-100"
-                asChild
-              >
+              <Button variant="outline" asChild>
                 <Link href="/packages">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Paket Lain
@@ -265,7 +355,7 @@ export default function PackageDetail() {
         <div className="absolute inset-0 bg-mesh-dark opacity-90 pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-[0.06] pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
 
-        <div className="relative container mx-auto max-w-6xl px-4 pt-10 pb-16 md:pt-14 md:pb-24 text-primary-foreground">
+        <div className="relative container mx-auto max-w-6xl px-4 pt-10 pb-16 md:pt-14 md:pb-20 text-primary-foreground">
           <Link href="/packages">
             <span className="inline-flex items-center gap-2 text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors mb-8 cursor-pointer">
               <ArrowLeft className="h-4 w-4" />
@@ -285,8 +375,6 @@ export default function PackageDetail() {
                   <div className="absolute inset-0 grid place-items-center">
                     <BookOpen className="h-20 w-20 text-white/40" />
                   </div>
-                  <div className="absolute -top-4 -right-4 h-32 w-32 rounded-full bg-accent/30 blur-3xl" />
-                  <div className="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-secondary/40 blur-3xl" />
                 </div>
               )}
             </div>
@@ -334,312 +422,288 @@ export default function PackageDetail() {
 
       {/* Body */}
       <section className="container mx-auto px-4 py-12 max-w-6xl -mt-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-6 min-w-0">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="font-display text-xl flex items-center gap-2">
-                  <span className="grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary">
-                    <Sparkles className="h-4 w-4" />
-                  </span>
-                  Fasilitas
-                </CardTitle>
-                <CardDescription>Yang kamu dapatkan dengan paket ini</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
-                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-                    <FileText className="h-5 w-5" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">Kuis Latihan</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {quizCount > 0
-                        ? `${quizCount} kuis untuk berlatih per sub-materi`
-                        : "Belum tersedia"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
-                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/10 text-accent flex-shrink-0">
-                    <BookOpen className="h-5 w-5" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">Materi Pembelajaran</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {materialCount > 0
-                        ? `${materialCount} materi PDF komprehensif`
-                        : "Materi akan segera ditambahkan"}
-                    </p>
-                    {materialsByCategory.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {materialsByCategory.map(({ category, count }) => (
-                          <Badge key={category} variant="secondary" className="font-medium">
-                            {category}: {count}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
-                  <span className="grid place-items-center h-10 w-10 rounded-xl bg-success/10 text-success flex-shrink-0">
-                    <Trophy className="h-5 w-5" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">Tryout Akbar</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {tryoutCount > 0
-                        ? `${tryoutCount} simulasi ujian CBT`
-                        : "Belum tersedia"}
-                    </p>
-                    {pkg.tryouts && pkg.tryouts.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {pkg.tryouts.map((t) => (
-                          <Badge key={t.id} variant="outline" className="font-medium">
-                            {t.title}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Tier picker */}
+        <div className="bg-card border border-card-border rounded-3xl shadow-card p-6 md:p-8 mb-10">
+          <div className="text-center mb-6">
+            <Badge variant="secondary" className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary/5 border border-primary/15 text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Pilih paket akses
+            </Badge>
+            <h2 className="font-display text-2xl md:text-3xl font-bold">Mulai dari gratis, naik tier kapan saja</h2>
+            <p className="text-sm md:text-base text-muted-foreground mt-2">
+              Akses berlaku selama {pkg.durationDays} hari setelah pembayaran terverifikasi.
+            </p>
           </div>
 
-          {/* Buy card */}
-          <aside>
-            <Card className="sticky top-24 shadow-card overflow-hidden">
-              <CardHeader className="space-y-1 pb-4">
-                <Badge className="w-fit bg-accent/15 text-accent hover:bg-accent/15 border border-accent/20">
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Harga spesial
-                </Badge>
-                {appliedReferral ? (
-                  <div className="pt-2 space-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-display text-4xl font-bold tracking-tight text-primary">
-                        {formatRupiah(Math.round(pkg.price * (1 - appliedReferral.discountPercent / 100)))}
-                      </span>
-                      <span className="text-base text-muted-foreground line-through">
-                        {formatRupiah(pkg.price)}
-                      </span>
-                    </div>
-                    <div className="text-xs text-emerald-600 font-medium">
-                      Hemat {formatRupiah(Math.round(pkg.price * (appliedReferral.discountPercent / 100)))} dengan kode {appliedReferral.code}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-baseline gap-2 pt-2">
-                    <span className="font-display text-4xl font-bold tracking-tight">
-                      {formatRupiah(pkg.price)}
-                    </span>
-                  </div>
-                )}
-                <CardDescription className="pt-1">
-                  Akses penuh selama {pkg.durationDays} hari
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="space-y-2.5 pt-1">
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="grid place-items-center h-7 w-7 rounded-lg bg-success/10 text-success flex-shrink-0">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                    </span>
-                    <span>Pembayaran aman & terverifikasi</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="grid place-items-center h-7 w-7 rounded-lg bg-accent/10 text-accent flex-shrink-0">
-                      <Clock className="h-3.5 w-3.5" />
-                    </span>
-                    <span>Akses instan setelah verifikasi</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="grid place-items-center h-7 w-7 rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    </span>
-                    <span>Refund jika tidak sesuai</span>
-                  </div>
-                </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {TIER_SPECS.map((spec) => {
+              const Icon = spec.icon;
+              const price = tierPriceFor(spec.key);
+              const isPaid = spec.key !== "free";
+              const unavailable = isPaid && price == null;
+              const isLoadingThis = isMutating && pendingTier === spec.key;
 
-                {pkg?.maintenanceMode ? (
-                  <>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full text-base font-semibold h-12"
-                      disabled
-                    >
-                      <Wrench className="mr-2 h-4 w-4" /> Under Maintenance
-                    </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Paket ini sedang dalam perbaikan, belum bisa dibeli.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3">
-                      <div className="flex items-center gap-2 text-xs font-medium text-primary">
-                        <Tag className="h-3.5 w-3.5" />
-                        Punya kode referal?
+              const discountedPrice = isPaid && appliedReferral && price != null
+                ? Math.round(price * (1 - appliedReferral.discountPercent / 100))
+                : null;
+
+              return (
+                <div
+                  key={spec.key}
+                  className={cn(
+                    "relative rounded-2xl border-2 p-6 flex flex-col",
+                    spec.accent,
+                    spec.highlightBorder,
+                  )}
+                >
+                  {spec.badgeText && (
+                    <Badge className={cn("absolute -top-3 left-1/2 -translate-x-1/2 border", spec.badgeClass)}>
+                      {spec.badgeText}
+                    </Badge>
+                  )}
+                  <div className={cn(
+                    "inline-flex items-center justify-center h-12 w-12 rounded-xl mb-4",
+                    spec.key === "free" && "bg-emerald-100 text-emerald-700",
+                    spec.key === "basic" && "bg-primary/15 text-primary",
+                    spec.key === "advance" && "bg-amber-100 text-amber-700",
+                  )}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="font-display text-xl font-bold">{spec.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{spec.tagline}</p>
+
+                  <div className="mt-4">
+                    {unavailable ? (
+                      <div className="text-muted-foreground italic">Belum tersedia</div>
+                    ) : spec.key === "free" ? (
+                      <div className="font-display text-3xl font-extrabold text-emerald-600">Free</div>
+                    ) : discountedPrice != null && appliedReferral ? (
+                      <div>
+                        <div className="font-display text-3xl font-extrabold text-primary">
+                          {formatRupiah(discountedPrice)}
+                        </div>
+                        <div className="text-xs text-muted-foreground line-through mt-0.5">
+                          {formatRupiah(price!)}
+                        </div>
                       </div>
-                      {appliedReferral ? (
-                        <div className="flex items-center justify-between gap-2 rounded-lg bg-background border border-emerald-200 px-3 py-2 text-sm">
-                          <div className="min-w-0">
-                            <div className="font-mono font-semibold text-emerald-700">{appliedReferral.code}</div>
-                            <div className="text-xs text-muted-foreground truncate">Dari {appliedReferral.holderName}</div>
-                          </div>
-                          <Button size="sm" variant="ghost" onClick={handleRemoveReferral} aria-label="Hapus kode">
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="MISAL: BUDIPARTNER"
-                            value={referralInput}
-                            onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyReferral(); } }}
-                            className="h-9 uppercase text-sm"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleApplyReferral}
-                            disabled={validating || !referralInput.trim()}
-                          >
-                            {validating ? "..." : "Terapkan"}
-                          </Button>
-                        </div>
-                      )}
+                    ) : (
+                      <div className="font-display text-3xl font-extrabold">
+                        {formatRupiah(price!)}
+                      </div>
+                    )}
+                  </div>
+
+                  <ul className="mt-5 space-y-2 text-sm flex-1">
+                    {spec.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <CheckCircle2 className={cn(
+                          "h-4 w-4 mt-0.5 shrink-0",
+                          spec.key === "free" && "text-emerald-600",
+                          spec.key === "basic" && "text-primary",
+                          spec.key === "advance" && "text-amber-600",
+                        )} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className="w-full mt-5"
+                    size="lg"
+                    variant={spec.key === "advance" ? "default" : spec.key === "basic" ? "default" : "outline"}
+                    disabled={unavailable || pkg.maintenanceMode || isMutating}
+                    onClick={() => {
+                      if (spec.key === "free") handleEnrollFree();
+                      else handleBuyTier(spec.key);
+                    }}
+                  >
+                    {pkg.maintenanceMode ? (
+                      <><Wrench className="mr-2 h-4 w-4" />Maintenance</>
+                    ) : isLoadingThis ? (
+                      "Memproses..."
+                    ) : spec.key === "free" ? (
+                      "Mulai Gratis"
+                    ) : (
+                      `Beli ${spec.label}`
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Referral input — applies to paid tiers */}
+          {!pkg.maintenanceMode && (
+            <div className="mt-6 max-w-md mx-auto">
+              <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3">
+                <div className="flex items-center gap-2 text-xs font-medium text-primary mb-2">
+                  <Tag className="h-3.5 w-3.5" />
+                  Punya kode referal? (berlaku untuk tier berbayar)
+                </div>
+                {appliedReferral ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-background border border-emerald-200 px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-mono font-semibold text-emerald-700">{appliedReferral.code}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        Diskon {appliedReferral.discountPercent}% — dari {appliedReferral.holderName}
+                      </div>
                     </div>
-                    <Button
-                      size="lg"
-                      className="w-full text-base font-semibold h-12 shadow-glow"
-                      onClick={handleBuy}
-                      disabled={createOrderMutation.isPending}
-                    >
-                      {createOrderMutation.isPending ? "Memproses..." : "Beli Paket Sekarang"}
+                    <Button size="sm" variant="ghost" onClick={handleRemoveReferral} aria-label="Hapus kode">
+                      <X className="h-3.5 w-3.5" />
                     </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Dengan membeli, kamu menyetujui{" "}
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <button
-                            type="button"
-                            className="font-medium text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-                          >
-                            Syarat &amp; Ketentuan
-                          </button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
-                          <DialogHeader>
-                            <DialogTitle>Syarat &amp; Ketentuan Pembelian</DialogTitle>
-                            <DialogDescription>
-                              Harap dibaca dengan saksama. Dengan menyelesaikan
-                              pembelian, kamu dianggap memahami dan menyetujui
-                              ketentuan berikut sepenuhnya.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <ScrollArea className="max-h-[55vh] pr-4">
-                            <ol className="list-decimal pl-5 space-y-3 text-sm text-foreground/90 leading-relaxed">
-                              <li>
-                                Seluruh pembelian paket bersifat <strong>final</strong>.
-                                Pembeli tidak berhak meminta pengembalian dana
-                                (refund) dengan alasan apa pun, termasuk namun
-                                tidak terbatas pada: berubah pikiran, salah pilih
-                                paket, tidak sempat belajar, atau hasil ujian
-                                yang tidak sesuai harapan.
-                              </li>
-                              <li>
-                                Lulusin <strong>tidak menjamin kelulusan</strong> peserta
-                                pada ujian apa pun. Pembeli memahami bahwa hasil
-                                akhir bergantung sepenuhnya pada usaha pribadi
-                                masing-masing, dan tidak berhak menuntut Lulusin
-                                atas hasil yang dicapai.
-                              </li>
-                              <li>
-                                Akses paket berlaku selama durasi yang tertera
-                                pada deskripsi paket dan akan berakhir secara
-                                otomatis tanpa pemberitahuan. Perpanjangan
-                                hanya dapat dilakukan melalui pembelian baru.
-                              </li>
-                              <li>
-                                Akun bersifat pribadi. Dilarang membagikan,
-                                meminjamkan, menyewakan, atau menjual akun
-                                kepada pihak lain. Pelanggaran berakibat
-                                <strong> penutupan akses permanen tanpa kompensasi
-                                ataupun pengembalian dana</strong>.
-                              </li>
-                              <li>
-                                Seluruh materi, video, soal, pembahasan, dan
-                                dokumen yang tersedia adalah hak cipta Lulusin.
-                                Dilarang menyalin, merekam, mendistribusikan,
-                                atau memublikasikan ulang dalam bentuk apa pun.
-                                Pelanggaran dapat dikenai tuntutan hukum.
-                              </li>
-                              <li>
-                                Lulusin berhak mengubah, menambah, mengganti,
-                                atau menghapus materi, soal, fitur, harga, dan
-                                ketentuan layanan <strong>sewaktu-waktu</strong> tanpa
-                                pemberitahuan terlebih dahulu, tanpa kewajiban
-                                kompensasi kepada pembeli.
-                              </li>
-                              <li>
-                                Layanan disediakan apa adanya (<em>as is</em>).
-                                Lulusin tidak bertanggung jawab atas gangguan
-                                teknis di luar kendali kami, termasuk gangguan
-                                jaringan internet pembeli, perangkat pembeli,
-                                penyedia pembayaran pihak ketiga, atau penyedia
-                                infrastruktur cloud.
-                              </li>
-                              <li>
-                                Pembeli bertanggung jawab atas keamanan kata
-                                sandi akunnya. Lulusin tidak bertanggung jawab
-                                atas kerugian akibat penyalahgunaan akun oleh
-                                pihak yang tidak berwenang.
-                              </li>
-                              <li>
-                                Promosi, diskon, voucher, dan bonus bersifat
-                                terbatas dan dapat dicabut sewaktu-waktu.
-                                Promosi tidak dapat digabung dengan promosi
-                                lain kecuali dinyatakan secara eksplisit.
-                              </li>
-                              <li>
-                                Dengan menyelesaikan pembelian, pembeli
-                                menyetujui pemrosesan data pribadi (nama,
-                                email, nomor telepon, dan riwayat aktivitas)
-                                untuk keperluan operasional, peningkatan
-                                layanan, dan komunikasi pemasaran dari Lulusin.
-                              </li>
-                              <li>
-                                Setiap sengketa diutamakan diselesaikan secara
-                                musyawarah. Apabila tidak tercapai, sengketa
-                                tunduk pada hukum Republik Indonesia dengan
-                                tempat penyelesaian di domisili Lulusin.
-                              </li>
-                              <li>
-                                Ketentuan ini dapat diperbarui sewaktu-waktu.
-                                Versi terbaru yang ditampilkan pada saat
-                                pembelian merupakan versi yang berlaku dan
-                                mengikat pembeli.
-                              </li>
-                            </ol>
-                          </ScrollArea>
-                        </DialogContent>
-                      </Dialog>{" "}
-                      kami.
-                    </p>
-                  </>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="MISAL: BUDIPARTNER"
+                      value={referralInput}
+                      onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyReferral(); } }}
+                      className="h-9 uppercase text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleApplyReferral}
+                      disabled={validating || !referralInput.trim()}
+                    >
+                      {validating ? "..." : "Terapkan"}
+                    </Button>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
-          </aside>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Trust signals + Fasilitas summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardContent className="pt-6 flex items-start gap-3">
+              <span className="grid place-items-center h-10 w-10 rounded-xl bg-success/10 text-success">
+                <ShieldCheck className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-semibold">Pembayaran aman</p>
+                <p className="text-sm text-muted-foreground">Transfer bank atau QRIS</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 flex items-start gap-3">
+              <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/10 text-accent">
+                <Clock className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-semibold">Akses instan</p>
+                <p className="text-sm text-muted-foreground">Setelah pembayaran diverifikasi</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 flex items-start gap-3">
+              <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-semibold">Upgrade kapan saja</p>
+                <p className="text-sm text-muted-foreground">Dari Free → Basic → Advance</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="font-display text-xl flex items-center gap-2">
+              <span className="grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              Isi paket lengkap
+            </CardTitle>
+            <CardDescription>Akses dibuka bertahap sesuai tier yang dipilih</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+              <span className="grid place-items-center h-10 w-10 rounded-xl bg-primary/10 text-primary flex-shrink-0">
+                <FileText className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">{quizCount} Kuis Latihan</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Free dapat {tierCounts.free.quizzes} · Basic dapat {tierCounts.basic.quizzes} · Advance dapat {tierCounts.advance.quizzes}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+              <span className="grid place-items-center h-10 w-10 rounded-xl bg-accent/10 text-accent flex-shrink-0">
+                <BookOpen className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">{materialCount} Materi Pembelajaran</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Free dapat {tierCounts.free.materials} · Basic dapat {tierCounts.basic.materials} · Advance dapat {tierCounts.advance.materials}
+                </p>
+                {materialsByCategory.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {materialsByCategory.map(({ category, count }) => (
+                      <Badge key={category} variant="secondary" className="font-medium">
+                        {category}: {count}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start p-3 rounded-xl border border-transparent hover:border-border hover:bg-muted/40 transition-colors">
+              <span className="grid place-items-center h-10 w-10 rounded-xl bg-success/10 text-success flex-shrink-0">
+                <Trophy className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">{tryoutCount} Tryout Akbar (CBT)</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Free dapat {tierCounts.free.tryouts} · Basic dapat {tierCounts.basic.tryouts} · Advance dapat {tierCounts.advance.tryouts}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-xs text-muted-foreground text-center mt-8">
+          Dengan membeli, kamu menyetujui{" "}
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="font-medium text-primary underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+              >
+                Syarat &amp; Ketentuan
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Syarat &amp; Ketentuan Pembelian</DialogTitle>
+                <DialogDescription>
+                  Harap dibaca dengan saksama. Dengan menyelesaikan pembelian, kamu dianggap memahami dan menyetujui ketentuan.
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[55vh] pr-4">
+                <ol className="list-decimal pl-5 space-y-3 text-sm text-foreground/90 leading-relaxed">
+                  <li>Seluruh pembelian paket bersifat <strong>final</strong> — tidak ada refund.</li>
+                  <li>Lulusin <strong>tidak menjamin kelulusan</strong> peserta pada ujian apa pun.</li>
+                  <li>Akses paket berlaku selama durasi yang tertera dan berakhir otomatis.</li>
+                  <li>Akun bersifat pribadi. Dilarang dibagikan / disewakan.</li>
+                  <li>Seluruh materi adalah hak cipta Lulusin; dilarang menyebarkan ulang.</li>
+                  <li>Lulusin berhak mengubah materi, harga, dan ketentuan sewaktu-waktu.</li>
+                </ol>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>{" "}
+          kami.
+        </p>
       </section>
     </div>
   );

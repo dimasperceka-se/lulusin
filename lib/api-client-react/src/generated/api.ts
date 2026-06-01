@@ -28,6 +28,7 @@ import type {
   BankAccountInput,
   BankAccountUpdate,
   CommissionListItem,
+  EnrollFreeInput,
   Enrollment,
   ErrorResponse,
   ForgotPasswordInput,
@@ -2793,6 +2794,92 @@ export function useListEnrollments<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Enroll the current student in a package at the Free tier (skips orders)
+ */
+export const getEnrollFreeTierUrl = () => {
+  return `/api/enrollments/free`;
+};
+
+export const enrollFreeTier = async (
+  enrollFreeInput: EnrollFreeInput,
+  options?: RequestInit,
+): Promise<Enrollment> => {
+  return customFetch<Enrollment>(getEnrollFreeTierUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(enrollFreeInput),
+  });
+};
+
+export const getEnrollFreeTierMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enrollFreeTier>>,
+    TError,
+    { data: BodyType<EnrollFreeInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof enrollFreeTier>>,
+  TError,
+  { data: BodyType<EnrollFreeInput> },
+  TContext
+> => {
+  const mutationKey = ["enrollFreeTier"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof enrollFreeTier>>,
+    { data: BodyType<EnrollFreeInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return enrollFreeTier(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EnrollFreeTierMutationResult = NonNullable<
+  Awaited<ReturnType<typeof enrollFreeTier>>
+>;
+export type EnrollFreeTierMutationBody = BodyType<EnrollFreeInput>;
+export type EnrollFreeTierMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Enroll the current student in a package at the Free tier (skips orders)
+ */
+export const useEnrollFreeTier = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enrollFreeTier>>,
+    TError,
+    { data: BodyType<EnrollFreeInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof enrollFreeTier>>,
+  TError,
+  { data: BodyType<EnrollFreeInput> },
+  TContext
+> => {
+  return useMutation(getEnrollFreeTierMutationOptions(options));
+};
 
 /**
  * @summary Get enrollment detail

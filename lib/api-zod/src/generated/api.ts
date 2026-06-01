@@ -303,7 +303,19 @@ export const ListPackagesResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string(),
-  price: zod.number(),
+  price: zod
+    .number()
+    .describe(
+      "Price of the Free tier (typically 0). Used as the headline price.",
+    ),
+  priceBasic: zod
+    .number()
+    .nullish()
+    .describe("Price for the Premium Basic tier. Null disables the tier."),
+  priceAdvance: zod
+    .number()
+    .nullish()
+    .describe("Price for the Premium Advance tier. Null disables the tier."),
   durationDays: zod.number(),
   category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
   thumbnail: zod.string().nullish(),
@@ -325,6 +337,8 @@ export const CreatePackageBody = zod.object({
   name: zod.string(),
   description: zod.string(),
   price: zod.number(),
+  priceBasic: zod.number().nullish(),
+  priceAdvance: zod.number().nullish(),
   durationDays: zod.number(),
   category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
   thumbnail: zod.string().nullish(),
@@ -343,6 +357,8 @@ export const GetPackageResponse = zod.object({
   name: zod.string(),
   description: zod.string(),
   price: zod.number(),
+  priceBasic: zod.number().nullish(),
+  priceAdvance: zod.number().nullish(),
   durationDays: zod.number(),
   category: zod.string(),
   thumbnail: zod.string().nullish(),
@@ -368,6 +384,9 @@ export const GetPackageResponse = zod.object({
         .describe(
           'Category for grouping in UI (e.g. \"TWK\", \"TIU\", \"TKP\", \"UMUM\").',
         ),
+      tier: zod
+        .enum(["free", "basic", "advance"])
+        .describe("Minimum tier required to access this material."),
       orderIndex: zod.number(),
       createdAt: zod.string(),
       isRead: zod.boolean().nullish(),
@@ -381,6 +400,7 @@ export const GetPackageResponse = zod.object({
       description: zod.string().nullish(),
       timeLimit: zod.number(),
       passingScore: zod.number(),
+      tier: zod.enum(["free", "basic", "advance"]),
       questionCount: zod.number().nullish(),
       createdAt: zod.string(),
     }),
@@ -394,6 +414,7 @@ export const GetPackageResponse = zod.object({
       durationMinutes: zod.number(),
       scheduledAt: zod.string().nullish(),
       packageId: zod.number().nullish(),
+      tier: zod.enum(["free", "basic", "advance"]),
       questionCount: zod.number().nullish(),
       createdAt: zod.string(),
     }),
@@ -411,6 +432,8 @@ export const UpdatePackageBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
   price: zod.number().optional(),
+  priceBasic: zod.number().nullish(),
+  priceAdvance: zod.number().nullish(),
   durationDays: zod.number().optional(),
   category: zod.string().optional(),
   thumbnail: zod.string().nullish(),
@@ -421,7 +444,19 @@ export const UpdatePackageResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string(),
-  price: zod.number(),
+  price: zod
+    .number()
+    .describe(
+      "Price of the Free tier (typically 0). Used as the headline price.",
+    ),
+  priceBasic: zod
+    .number()
+    .nullish()
+    .describe("Price for the Premium Basic tier. Null disables the tier."),
+  priceAdvance: zod
+    .number()
+    .nullish()
+    .describe("Price for the Premium Advance tier. Null disables the tier."),
   durationDays: zod.number(),
   category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
   thumbnail: zod.string().nullish(),
@@ -511,6 +546,7 @@ export const ListOrdersResponse = zod.object({
       orderCode: zod.string(),
       amount: zod.number(),
       uniqueAmount: zod.number(),
+      tier: zod.enum(["free", "basic", "advance"]),
       status: zod.enum([
         "PENDING",
         "WAITING_VERIFICATION",
@@ -541,7 +577,23 @@ export const ListOrdersResponse = zod.object({
           id: zod.number(),
           name: zod.string(),
           description: zod.string(),
-          price: zod.number(),
+          price: zod
+            .number()
+            .describe(
+              "Price of the Free tier (typically 0). Used as the headline price.",
+            ),
+          priceBasic: zod
+            .number()
+            .nullish()
+            .describe(
+              "Price for the Premium Basic tier. Null disables the tier.",
+            ),
+          priceAdvance: zod
+            .number()
+            .nullish()
+            .describe(
+              "Price for the Premium Advance tier. Null disables the tier.",
+            ),
           durationDays: zod.number(),
           category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
           thumbnail: zod.string().nullish(),
@@ -580,6 +632,12 @@ export const ListOrdersResponse = zod.object({
  */
 export const CreateOrderBody = zod.object({
   packageId: zod.number(),
+  tier: zod
+    .enum(["basic", "advance"])
+    .optional()
+    .describe(
+      "Tier to purchase. Free tier does not go through orders — use POST \/enrollments\/free instead.",
+    ),
   paymentMethod: zod.enum(["BANK_TRANSFER", "QRIS"]).optional(),
   referralCode: zod
     .string()
@@ -603,6 +661,7 @@ export const GetOrderResponse = zod.object({
   orderCode: zod.string(),
   amount: zod.number(),
   uniqueAmount: zod.number(),
+  tier: zod.enum(["free", "basic", "advance"]),
   status: zod.enum([
     "PENDING",
     "WAITING_VERIFICATION",
@@ -633,7 +692,21 @@ export const GetOrderResponse = zod.object({
       id: zod.number(),
       name: zod.string(),
       description: zod.string(),
-      price: zod.number(),
+      price: zod
+        .number()
+        .describe(
+          "Price of the Free tier (typically 0). Used as the headline price.",
+        ),
+      priceBasic: zod
+        .number()
+        .nullish()
+        .describe("Price for the Premium Basic tier. Null disables the tier."),
+      priceAdvance: zod
+        .number()
+        .nullish()
+        .describe(
+          "Price for the Premium Advance tier. Null disables the tier.",
+        ),
       durationDays: zod.number(),
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
@@ -678,6 +751,7 @@ export const UploadPaymentProofResponse = zod.object({
   orderCode: zod.string(),
   amount: zod.number(),
   uniqueAmount: zod.number(),
+  tier: zod.enum(["free", "basic", "advance"]),
   status: zod.enum([
     "PENDING",
     "WAITING_VERIFICATION",
@@ -708,7 +782,21 @@ export const UploadPaymentProofResponse = zod.object({
       id: zod.number(),
       name: zod.string(),
       description: zod.string(),
-      price: zod.number(),
+      price: zod
+        .number()
+        .describe(
+          "Price of the Free tier (typically 0). Used as the headline price.",
+        ),
+      priceBasic: zod
+        .number()
+        .nullish()
+        .describe("Price for the Premium Basic tier. Null disables the tier."),
+      priceAdvance: zod
+        .number()
+        .nullish()
+        .describe(
+          "Price for the Premium Advance tier. Null disables the tier.",
+        ),
       durationDays: zod.number(),
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
@@ -754,6 +842,7 @@ export const VerifyOrderResponse = zod.object({
   orderCode: zod.string(),
   amount: zod.number(),
   uniqueAmount: zod.number(),
+  tier: zod.enum(["free", "basic", "advance"]),
   status: zod.enum([
     "PENDING",
     "WAITING_VERIFICATION",
@@ -784,7 +873,21 @@ export const VerifyOrderResponse = zod.object({
       id: zod.number(),
       name: zod.string(),
       description: zod.string(),
-      price: zod.number(),
+      price: zod
+        .number()
+        .describe(
+          "Price of the Free tier (typically 0). Used as the headline price.",
+        ),
+      priceBasic: zod
+        .number()
+        .nullish()
+        .describe("Price for the Premium Basic tier. Null disables the tier."),
+      priceAdvance: zod
+        .number()
+        .nullish()
+        .describe(
+          "Price for the Premium Advance tier. Null disables the tier.",
+        ),
       durationDays: zod.number(),
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
@@ -836,6 +939,7 @@ export const UpdateOrderMethodResponse = zod.object({
   orderCode: zod.string(),
   amount: zod.number(),
   uniqueAmount: zod.number(),
+  tier: zod.enum(["free", "basic", "advance"]),
   status: zod.enum([
     "PENDING",
     "WAITING_VERIFICATION",
@@ -866,7 +970,21 @@ export const UpdateOrderMethodResponse = zod.object({
       id: zod.number(),
       name: zod.string(),
       description: zod.string(),
-      price: zod.number(),
+      price: zod
+        .number()
+        .describe(
+          "Price of the Free tier (typically 0). Used as the headline price.",
+        ),
+      priceBasic: zod
+        .number()
+        .nullish()
+        .describe("Price for the Premium Basic tier. Null disables the tier."),
+      priceAdvance: zod
+        .number()
+        .nullish()
+        .describe(
+          "Price for the Premium Advance tier. Null disables the tier.",
+        ),
       durationDays: zod.number(),
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
@@ -903,12 +1021,27 @@ export const ListEnrollmentsResponseItem = zod.object({
   startedAt: zod.string(),
   expiredAt: zod.string(),
   isActive: zod.boolean(),
+  tier: zod.enum(["free", "basic", "advance"]),
   package: zod
     .object({
       id: zod.number(),
       name: zod.string(),
       description: zod.string(),
-      price: zod.number(),
+      price: zod
+        .number()
+        .describe(
+          "Price of the Free tier (typically 0). Used as the headline price.",
+        ),
+      priceBasic: zod
+        .number()
+        .nullish()
+        .describe("Price for the Premium Basic tier. Null disables the tier."),
+      priceAdvance: zod
+        .number()
+        .nullish()
+        .describe(
+          "Price for the Premium Advance tier. Null disables the tier.",
+        ),
       durationDays: zod.number(),
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
@@ -927,6 +1060,13 @@ export const ListEnrollmentsResponseItem = zod.object({
 export const ListEnrollmentsResponse = zod.array(ListEnrollmentsResponseItem);
 
 /**
+ * @summary Enroll the current student in a package at the Free tier (skips orders)
+ */
+export const EnrollFreeTierBody = zod.object({
+  packageId: zod.number(),
+});
+
+/**
  * @summary Get enrollment detail
  */
 export const GetEnrollmentParams = zod.object({
@@ -940,12 +1080,27 @@ export const GetEnrollmentResponse = zod.object({
   startedAt: zod.string(),
   expiredAt: zod.string(),
   isActive: zod.boolean(),
+  tier: zod.enum(["free", "basic", "advance"]),
   package: zod
     .object({
       id: zod.number(),
       name: zod.string(),
       description: zod.string(),
-      price: zod.number(),
+      price: zod
+        .number()
+        .describe(
+          "Price of the Free tier (typically 0). Used as the headline price.",
+        ),
+      priceBasic: zod
+        .number()
+        .nullish()
+        .describe("Price for the Premium Basic tier. Null disables the tier."),
+      priceAdvance: zod
+        .number()
+        .nullish()
+        .describe(
+          "Price for the Premium Advance tier. Null disables the tier.",
+        ),
       durationDays: zod.number(),
       category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
       thumbnail: zod.string().nullish(),
@@ -987,6 +1142,9 @@ export const ListMaterialsResponseItem = zod.object({
     .describe(
       'Category for grouping in UI (e.g. \"TWK\", \"TIU\", \"TKP\", \"UMUM\").',
     ),
+  tier: zod
+    .enum(["free", "basic", "advance"])
+    .describe("Minimum tier required to access this material."),
   orderIndex: zod.number(),
   createdAt: zod.string(),
   isRead: zod.boolean().nullish(),
@@ -1039,6 +1197,9 @@ export const UpdateMaterialResponse = zod.object({
     .describe(
       'Category for grouping in UI (e.g. \"TWK\", \"TIU\", \"TKP\", \"UMUM\").',
     ),
+  tier: zod
+    .enum(["free", "basic", "advance"])
+    .describe("Minimum tier required to access this material."),
   orderIndex: zod.number(),
   createdAt: zod.string(),
   isRead: zod.boolean().nullish(),
@@ -1217,6 +1378,7 @@ export const ListQuizzesResponseItem = zod.object({
   description: zod.string().nullish(),
   timeLimit: zod.number(),
   passingScore: zod.number(),
+  tier: zod.enum(["free", "basic", "advance"]),
   questionCount: zod.number().nullish(),
   createdAt: zod.string(),
 });
@@ -1292,6 +1454,7 @@ export const UpdateQuizResponse = zod.object({
   description: zod.string().nullish(),
   timeLimit: zod.number(),
   passingScore: zod.number(),
+  tier: zod.enum(["free", "basic", "advance"]),
   questionCount: zod.number().nullish(),
   createdAt: zod.string(),
 });
@@ -1331,6 +1494,7 @@ export const ListTryoutsResponseItem = zod.object({
   durationMinutes: zod.number(),
   scheduledAt: zod.string().nullish(),
   packageId: zod.number().nullish(),
+  tier: zod.enum(["free", "basic", "advance"]),
   questionCount: zod.number().nullish(),
   createdAt: zod.string(),
 });
@@ -1404,6 +1568,7 @@ export const UpdateTryoutResponse = zod.object({
   durationMinutes: zod.number(),
   scheduledAt: zod.string().nullish(),
   packageId: zod.number().nullish(),
+  tier: zod.enum(["free", "basic", "advance"]),
   questionCount: zod.number().nullish(),
   createdAt: zod.string(),
 });
@@ -1795,12 +1960,29 @@ export const GetStudentDashboardResponse = zod.object({
       startedAt: zod.string(),
       expiredAt: zod.string(),
       isActive: zod.boolean(),
+      tier: zod.enum(["free", "basic", "advance"]),
       package: zod
         .object({
           id: zod.number(),
           name: zod.string(),
           description: zod.string(),
-          price: zod.number(),
+          price: zod
+            .number()
+            .describe(
+              "Price of the Free tier (typically 0). Used as the headline price.",
+            ),
+          priceBasic: zod
+            .number()
+            .nullish()
+            .describe(
+              "Price for the Premium Basic tier. Null disables the tier.",
+            ),
+          priceAdvance: zod
+            .number()
+            .nullish()
+            .describe(
+              "Price for the Premium Advance tier. Null disables the tier.",
+            ),
           durationDays: zod.number(),
           category: zod.enum(["CPNS", "SD", "SMP", "SMA"]),
           thumbnail: zod.string().nullish(),

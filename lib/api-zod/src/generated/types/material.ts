@@ -5,6 +5,7 @@
  * CPNS & School Tutoring Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { MaterialTier } from "./materialTier";
 
 export interface Material {
   id: number;
@@ -24,6 +25,8 @@ export interface Material {
    * @nullable
    */
   category?: string | null;
+  /** Minimum tier required to access this material. */
+  tier: MaterialTier;
   orderIndex: number;
   createdAt: string;
   /** @nullable */

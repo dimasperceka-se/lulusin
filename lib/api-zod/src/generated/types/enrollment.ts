@@ -5,6 +5,7 @@
  * CPNS & School Tutoring Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { EnrollmentTier } from "./enrollmentTier";
 import type { Package } from "./package";
 
 export interface Enrollment {
@@ -14,6 +15,7 @@ export interface Enrollment {
   startedAt: string;
   expiredAt: string;
   isActive: boolean;
+  tier: EnrollmentTier;
   package?: Package;
   /** @nullable */
   progressPercent?: number | null;

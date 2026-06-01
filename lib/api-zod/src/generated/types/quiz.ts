@@ -5,6 +5,7 @@
  * CPNS & School Tutoring Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { QuizTier } from "./quizTier";
 
 export interface Quiz {
   id: number;
@@ -14,6 +15,7 @@ export interface Quiz {
   description?: string | null;
   timeLimit: number;
   passingScore: number;
+  tier: QuizTier;
   /** @nullable */
   questionCount?: number | null;
   createdAt: string;

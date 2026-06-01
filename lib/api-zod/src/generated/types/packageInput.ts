@@ -11,6 +11,10 @@ export interface PackageInput {
   name: string;
   description: string;
   price: number;
+  /** @nullable */
+  priceBasic?: number | null;
+  /** @nullable */
+  priceAdvance?: number | null;
   durationDays: number;
   category: PackageInputCategory;
   /** @nullable */

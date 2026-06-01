@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, boolean, timestamp, text } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -12,6 +12,7 @@ export const enrollmentsTable = pgTable("enrollments", {
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   expiredAt: timestamp("expired_at", { withTimezone: true }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  tier: text("tier", { enum: ["free", "basic", "advance"] }).notNull().default("free"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

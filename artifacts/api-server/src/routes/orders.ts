@@ -118,17 +118,36 @@ export async function markOrderPaid(orderId: number, paidAt?: Date): Promise<voi
     paidAt: paidAt ?? new Date(),
   }).where(eq(ordersTable.id, orderId));
 
-  await db.insert(enrollmentsTable).values({
-    userId: current.userId,
-    packageId: current.packageId,
-    startedAt: new Date(),
-    expiredAt,
-    isActive: true,
-  }).onConflictDoNothing();
+  await upsertEnrollment(current.userId, current.packageId, current.tier, expiredAt);
 
-  logger.info({ orderId, userId: current.userId }, "Order auto-marked PAID, enrollment created");
+  logger.info({ orderId, userId: current.userId, tier: current.tier }, "Order auto-marked PAID, enrollment created");
 
   await createCommissionIfMissing(current);
+}
+
+const TIER_RANK: Record<string, number> = { free: 0, basic: 1, advance: 2 };
+
+export async function upsertEnrollment(
+  userId: number,
+  packageId: number,
+  tier: "free" | "basic" | "advance",
+  expiredAt: Date,
+): Promise<void> {
+  const existing = await db.select().from(enrollmentsTable).where(
+    and(eq(enrollmentsTable.userId, userId), eq(enrollmentsTable.packageId, packageId))
+  );
+  if (existing.length === 0) {
+    await db.insert(enrollmentsTable).values({
+      userId, packageId, startedAt: new Date(), expiredAt, isActive: true, tier,
+    });
+    return;
+  }
+  const best = existing.reduce((a, b) => (TIER_RANK[a.tier] >= TIER_RANK[b.tier] ? a : b));
+  const newTier = TIER_RANK[tier] > TIER_RANK[best.tier] ? tier : best.tier;
+  const newExpiredAt = expiredAt > best.expiredAt ? expiredAt : best.expiredAt;
+  await db.update(enrollmentsTable)
+    .set({ tier: newTier, expiredAt: newExpiredAt, isActive: true })
+    .where(eq(enrollmentsTable.id, best.id));
 }
 
 router.get("/orders", authenticate, async (req, res): Promise<void> => {
@@ -169,18 +188,30 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
     return;
   }
 
-  const existing = await db.select().from(enrollmentsTable).where(
+  const tier = (parsed.data.tier ?? "basic") as "basic" | "advance";
+  const tierPrice = tier === "advance" ? pkg.priceAdvance : pkg.priceBasic;
+  if (tierPrice == null) {
+    res.status(400).json({ error: `Tier "${tier}" tidak tersedia pada paket ini.` });
+    return;
+  }
+
+  // Allow upgrade: block re-order only when the user already has the same tier (or higher).
+  const TIER_RANK: Record<string, number> = { free: 0, basic: 1, advance: 2 };
+  const existingEnrollments = await db.select().from(enrollmentsTable).where(
     and(eq(enrollmentsTable.userId, req.user!.userId), eq(enrollmentsTable.packageId, parsed.data.packageId))
   );
-  if (existing.length > 0) {
-    res.status(400).json({ error: "Already enrolled in this package" });
+  const alreadyHasTierOrHigher = existingEnrollments.some(
+    (e) => TIER_RANK[e.tier] >= TIER_RANK[tier]
+  );
+  if (alreadyHasTierOrHigher) {
+    res.status(400).json({ error: `Anda sudah memiliki paket ini di tier ${tier} atau lebih tinggi.` });
     return;
   }
 
   let resolvedReferralCode: string | null = null;
   let resolvedReferralHolderId: number | null = null;
   let discountAmount = 0;
-  let finalAmount = pkg.price;
+  let finalAmount = tierPrice;
 
   const inputCode = parsed.data.referralCode?.trim().toUpperCase();
   if (inputCode) {
@@ -197,8 +228,8 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
     }
     resolvedReferralCode = rc.code;
     resolvedReferralHolderId = rc.holderUserId;
-    discountAmount = calcDiscount(pkg.price);
-    finalAmount = pkg.price - discountAmount;
+    discountAmount = calcDiscount(tierPrice);
+    finalAmount = tierPrice - discountAmount;
   }
 
   const expiredAt = new Date();
@@ -225,6 +256,7 @@ router.post("/orders", authenticate, requireRole("student"), async (req, res): P
     orderCode,
     amount: finalAmount,
     uniqueAmount,
+    tier,
     paymentMethod,
     status: "PENDING",
     expiredAt,
@@ -359,15 +391,9 @@ router.post("/orders/:id/verify", authenticate, requireRole("admin"), async (req
       verifiedBy: req.user!.userId,
     }).where(eq(ordersTable.id, id)).returning();
 
-    await db.insert(enrollmentsTable).values({
-      userId: order.userId,
-      packageId: order.packageId,
-      startedAt: new Date(),
-      expiredAt,
-      isActive: true,
-    }).onConflictDoNothing();
+    await upsertEnrollment(order.userId, order.packageId, order.tier, expiredAt);
 
-    logger.info({ orderId: id, userId: order.userId }, "Order approved, enrollment created");
+    logger.info({ orderId: id, userId: order.userId, tier: order.tier }, "Order approved, enrollment created");
 
     await createCommissionIfMissing(updated);
 

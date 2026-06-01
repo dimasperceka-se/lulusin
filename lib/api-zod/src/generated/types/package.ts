@@ -11,7 +11,18 @@ export interface Package {
   id: number;
   name: string;
   description: string;
+  /** Price of the Free tier (typically 0). Used as the headline price. */
   price: number;
+  /**
+   * Price for the Premium Basic tier. Null disables the tier.
+   * @nullable
+   */
+  priceBasic?: number | null;
+  /**
+   * Price for the Premium Advance tier. Null disables the tier.
+   * @nullable
+   */
+  priceAdvance?: number | null;
   durationDays: number;
   category: PackageCategory;
   /** @nullable */

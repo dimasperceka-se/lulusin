@@ -14,6 +14,10 @@ export interface PackageDetail {
   name: string;
   description: string;
   price: number;
+  /** @nullable */
+  priceBasic?: number | null;
+  /** @nullable */
+  priceAdvance?: number | null;
   durationDays: number;
   category: string;
   /** @nullable */

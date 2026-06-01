@@ -6,9 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OrderInputPaymentMethod } from "./orderInputPaymentMethod";
+import type { OrderInputTier } from "./orderInputTier";
 
 export interface OrderInput {
   packageId: number;
+  /** Tier to purchase. Free tier does not go through orders — use POST /enrollments/free instead. */
+  tier?: OrderInputTier;
   paymentMethod?: OrderInputPaymentMethod;
   /**
    * Optional referral code applied to this order; triggers 10% discount if valid.

@@ -8,6 +8,7 @@
 import type { BankAccount } from "./bankAccount";
 import type { OrderPaymentMethod } from "./orderPaymentMethod";
 import type { OrderStatus } from "./orderStatus";
+import type { OrderTier } from "./orderTier";
 import type { Package } from "./package";
 
 export interface Order {
@@ -17,6 +18,7 @@ export interface Order {
   orderCode: string;
   amount: number;
   uniqueAmount: number;
+  tier: OrderTier;
   status: OrderStatus;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */

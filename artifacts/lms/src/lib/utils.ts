@@ -9,6 +9,10 @@ export function formatRupiah(amount: number): string {
   return "Rp " + amount.toLocaleString("id-ID");
 }
 
+export function formatPriceOrFree(amount: number): string {
+  return amount === 0 ? "Free" : formatRupiah(amount);
+}
+
 export function formatScore(value: number | null | undefined, fallback = "-"): string {
   if (value === null || value === undefined || Number.isNaN(value)) return fallback;
   return Number(value).toFixed(2);

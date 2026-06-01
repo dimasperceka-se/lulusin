@@ -5,6 +5,7 @@
  * CPNS & School Tutoring Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { TryoutTier } from "./tryoutTier";
 import type { TryoutType } from "./tryoutType";
 
 export interface Tryout {
@@ -18,6 +19,7 @@ export interface Tryout {
   scheduledAt?: string | null;
   /** @nullable */
   packageId?: number | null;
+  tier: TryoutTier;
   /** @nullable */
   questionCount?: number | null;
   createdAt: string;

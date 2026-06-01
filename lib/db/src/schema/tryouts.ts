@@ -13,6 +13,7 @@ export const tryoutsTable = pgTable("tryouts", {
   durationMinutes: integer("duration_minutes").notNull(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   packageId: integer("package_id").references(() => packagesTable.id),
+  tier: text("tier", { enum: ["free", "basic", "advance"] }).notNull().default("free"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
