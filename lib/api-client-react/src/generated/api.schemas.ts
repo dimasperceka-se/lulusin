@@ -907,6 +907,35 @@ export interface RankingEntry {
   isCurrentUser?: boolean;
 }
 
+export type RoboEduMessageRole =
+  (typeof RoboEduMessageRole)[keyof typeof RoboEduMessageRole];
+
+export const RoboEduMessageRole = {
+  user: "user",
+  assistant: "assistant",
+} as const;
+
+export interface RoboEduMessage {
+  role: RoboEduMessageRole;
+  /**
+   * @minLength 1
+   * @maxLength 4000
+   */
+  content: string;
+}
+
+export interface RoboEduChatInput {
+  /**
+   * @minItems 1
+   * @maxItems 50
+   */
+  messages: RoboEduMessage[];
+}
+
+export interface RoboEduReply {
+  reply: string;
+}
+
 export interface PreTestQuestion {
   id: number;
   questionText: string;

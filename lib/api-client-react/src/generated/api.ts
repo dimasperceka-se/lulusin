@@ -83,6 +83,8 @@ import type {
   ResendVerificationResult,
   ResetPasswordInput,
   RevenueData,
+  RoboEduChatInput,
+  RoboEduReply,
   ScoreHistoryPoint,
   StudentDashboard,
   Tryout,
@@ -105,6 +107,92 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Send a message to Robo-Edu (CPNS AI coach). Public, rate-limited per IP.
+ */
+export const getRoboEduChatUrl = () => {
+  return `/api/robo-edu/chat`;
+};
+
+export const roboEduChat = async (
+  roboEduChatInput: RoboEduChatInput,
+  options?: RequestInit,
+): Promise<RoboEduReply> => {
+  return customFetch<RoboEduReply>(getRoboEduChatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(roboEduChatInput),
+  });
+};
+
+export const getRoboEduChatMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof roboEduChat>>,
+    TError,
+    { data: BodyType<RoboEduChatInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof roboEduChat>>,
+  TError,
+  { data: BodyType<RoboEduChatInput> },
+  TContext
+> => {
+  const mutationKey = ["roboEduChat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof roboEduChat>>,
+    { data: BodyType<RoboEduChatInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return roboEduChat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RoboEduChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof roboEduChat>>
+>;
+export type RoboEduChatMutationBody = BodyType<RoboEduChatInput>;
+export type RoboEduChatMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Send a message to Robo-Edu (CPNS AI coach). Public, rate-limited per IP.
+ */
+export const useRoboEduChat = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof roboEduChat>>,
+    TError,
+    { data: BodyType<RoboEduChatInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof roboEduChat>>,
+  TError,
+  { data: BodyType<RoboEduChatInput> },
+  TContext
+> => {
+  return useMutation(getRoboEduChatMutationOptions(options));
+};
 
 /**
  * @summary Get 15 random questions (5 TWK + 5 TIU + 5 TKP) without correct answers

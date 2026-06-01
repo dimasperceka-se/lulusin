@@ -8,6 +8,29 @@
 import * as zod from "zod";
 
 /**
+ * @summary Send a message to Robo-Edu (CPNS AI coach). Public, rate-limited per IP.
+ */
+export const roboEduChatBodyMessagesItemContentMax = 4000;
+
+export const roboEduChatBodyMessagesMax = 50;
+
+export const RoboEduChatBody = zod.object({
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "assistant"]),
+        content: zod.string().min(1).max(roboEduChatBodyMessagesItemContentMax),
+      }),
+    )
+    .min(1)
+    .max(roboEduChatBodyMessagesMax),
+});
+
+export const RoboEduChatResponse = zod.object({
+  reply: zod.string(),
+});
+
+/**
  * @summary Get 15 random questions (5 TWK + 5 TIU + 5 TKP) without correct answers
  */
 export const GetPreTestQuestionsResponseItem = zod.object({

@@ -15,6 +15,7 @@ import studentRouter from "./student";
 import preTestRouter from "./pre-test";
 import webhooksRouter from "./webhooks";
 import referralRouter from "./referral";
+import roboEduRouter from "./robo-edu";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(studentRouter);
 router.use(preTestRouter);
 router.use(webhooksRouter);
 router.use(referralRouter);
+router.use(roboEduRouter);
 
 export default router;

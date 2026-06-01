@@ -15,6 +15,7 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import PreTest from "@/pages/pre-test";
 import PreTestResult from "@/pages/pre-test-result";
+import RoboEdu from "@/pages/robo-edu";
 import Packages from "@/pages/packages";
 import PackageDetail from "@/pages/package-detail";
 
@@ -113,6 +114,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/pre-test" component={PreTest} />
       <Route path="/pre-test/result" component={PreTestResult} />
+      <Route path="/robo-edu" component={RoboEdu} />
       
       {/* Shared Protected */}
       <Route path="/profile">{(params) => <ProtectedRoute component={Profile} {...params} />}</Route>

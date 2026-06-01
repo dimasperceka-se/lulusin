@@ -42,6 +42,31 @@ tags:
     description: Referral program (referral_holder signup, code validation, commissions)
 
 paths:
+  /robo-edu/chat:
+    post:
+      operationId: roboEduChat
+      tags: [pre-test]
+      summary: Send a message to Robo-Edu (CPNS AI coach). Public, rate-limited per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoboEduChatInput"
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoboEduReply"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /pre-test/questions:
     get:
       operationId: getPreTestQuestions
@@ -2828,6 +2853,36 @@ components:
           type: number
         isCurrentUser:
           type: boolean
+
+    RoboEduMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+
+    RoboEduChatInput:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/RoboEduMessage"
+
+    RoboEduReply:
+      type: object
+      required: [reply]
+      properties:
+        reply:
+          type: string
 
     PreTestQuestion:
       type: object
